@@ -62,6 +62,38 @@ def uploadFilesPCA():
           # save the file
       return redirect(url_for('pca'))
 
+@app.route('/arboles')
+def arboles():
+    return render_template('arboles.html')
+
+# Get the uploaded files
+@app.route("/arboles", methods=['POST'])
+def uploadFilesArboles():
+      # get the uploaded file
+      uploaded_file = request.files['file']
+      if uploaded_file.filename != '':
+           file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
+          # set the file path
+           uploaded_file.save(file_path)
+          # save the file
+      return redirect(url_for('arboles'))
+
+@app.route('/bosques')
+def bosques():
+    return render_template('bosques.html')
+
+# Get the uploaded files
+@app.route("/bosques", methods=['POST'])
+def uploadFilesBosques():
+      # get the uploaded file
+      uploaded_file = request.files['file']
+      if uploaded_file.filename != '':
+           file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
+          # set the file path
+           uploaded_file.save(file_path)
+          # save the file
+      return redirect(url_for('bosques'))
+
 
 # -------- Graficas ---------------------------------------------------
 
