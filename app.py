@@ -13,6 +13,10 @@ from os.path import join, dirname, realpath
 
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, MinMaxScaler 
+from sklearn import model_selection
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.ensemble import RandomForestRegressor
 
 app = Flask(__name__)
 
@@ -56,25 +60,47 @@ def uploadFilesEDA():
 @app.route('/pca')
 def pca():
     #df = pd.read_csv('https://raw.githubusercontent.com/PizzaDude007/MineriaDatos/main/Datos/Hipoteca.csv')
+    fileName = request.args.get('fileData')
+    
+    if (names.filePCA is not None and fileName is not None):
+        names.filePCA = fileName
+
+    print('Internal: '+str(names.filePCA))
+    print('External: '+str(fileName))
+    
     df = pd.read_csv('static/csv/'+names.filePCA)
 
-    return render_template('pca.html', table=df, pd=pd)
+    return render_template('pca.html', table=df, pd=pd, nameData=names.filePCA)
 
 # Get the uploaded files
 @app.route("/pca", methods=['POST'])
 def uploadFilesPCA():
-      # get the uploaded file
-      uploaded_file = request.files['file']
-      if uploaded_file.filename != '':
-           file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
-          # set the file path
-           uploaded_file.save(file_path)
-          # save the file
-      return redirect(url_for('pca'))
+    # get the uploaded file
+    uploaded_file = request.files['file']
+    if uploaded_file.filename != '':
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
+        # set the file path
+        uploaded_file.save(file_path)
+        # save the file
+    return redirect(url_for('pca'))
+    #df = pd.read_csv('static/csv/'+names.filePCA)
+
+    #return render_template('pca.html', table=df, pd=pd)
 
 @app.route('/arboles')
 def arboles():
-    return render_template('arboles.html')
+    fileName = request.args.get('fileData')
+    x = request.args.get('valorX')
+    y = request.args.get('valorY')
+    if (names.fileArboles is not None and fileName is not None):
+        names.fileArboles = fileName
+    
+    df = pd.read_csv('static/csv/'+names.fileArboles)
+
+    if (x is not None and y is not None):
+        resultado = train(df, x, y)
+
+    return render_template('arboles.html', table=df, nameData=names.fileArboles, res=resultado)
 
 # Get the uploaded files
 @app.route("/arboles", methods=['POST'])
@@ -103,6 +129,25 @@ def uploadFilesBosques():
            uploaded_file.save(file_path)
           # save the file
       return redirect(url_for('bosques'))
+
+
+# Entrenar variables
+def train(df, x, y, arbol=True):
+    X_train, X_test, Y_train, Y_test = model_selection.train_test_split(x, y, 
+                                                                    test_size = 0.2, 
+                                                                    random_state = 0, 
+                                                                    shuffle = True)
+    
+    if(arbol):
+        Pronostico = DecisionTreeRegressor(random_state=0)
+    else:
+        Pronostico = RandomForestRegressor(random_state=0)
+    Pronostico.fit(X_train, Y_train)
+    Y_Pronostico = Pronostico.predict(X_test)
+    Valores = pd.DataFrame(Y_test, Y_Pronostico)
+    Score = r2_score(Y_test, Y_Pronostico)
+
+    return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score}
 
 
 # -------- Graficas ---------------------------------------------------
@@ -278,6 +323,8 @@ def carComp():
     return jsonify(#number_elements=a * b,
                    my_table=json.loads(df.to_json(orient="split"))["data"],
                    columns=[{"title": str(col)} for col in json.loads(df.to_json(orient="split"))["columns"]])
+
+# Tabla para mostrar variables Arboles
 
 def gm(country='United Kingdom'):
     df = pd.DataFrame(px.data.gapminder())

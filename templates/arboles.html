@@ -11,6 +11,12 @@
 
     <title>Data Pick - Árboles</title>
 
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
+
     <!-- Custom fonts for this template-->
     <link href="{{url_for('static', filename='vendor/fontawesome-free/css/all.min.css')}}" rel="stylesheet" type="text/css">
     <link
@@ -24,31 +30,15 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
     <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
-    <script>
-        function cb(selection) {
-            $.getJSON({
-                url: "/callback", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('chart', result, {});;
-                }
-            });
-        }
-    </script>
 
     <script>
-        function histCall(selection) {
-            $.getJSON({
-                url: "/hist", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('histChart', result, {});;
-                }
-            });
-        }
+        $('select').selectpicker();
     </script>
-
+    
     <script>
-        function hmCall(selection) {
+        function arboles(selection, xData, yData) {
             $.getJSON({
-                url: "/hMap", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('heatMap', result, {});;
+                url: "/arboles", data: { 'fileData': selection, 'valorX': xData, 'valorY': yData}, success: function (result) {
                 }
             });
         }
@@ -308,43 +298,41 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <h4>Upload your CSV file</h4>
+                                    <h6>Carga o Selecciona Archivo</h6>
                                     <form method="POST" action="" enctype="multipart/form-data">
                                     <p><input type="file" name="file"></p>
                                     <p><input type="submit" value="Submit"></p>
+                                    <input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), scattCall(this.value), scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value), changeText(this.value)">  
                                     </form>
 
                                     <p>Select DF</p>
 
                                     <div class="header">
-                                    <h3 class="text-muted">Create a pretty table</h3>
+                                    <h3 class="text-muted">Crear tabla</h3>
                                     </div>
                             
                                     <div>
-                                    <p>File</p>
-                                    <input type="text" name="fileName" id="fileName" value='melb_data.csv' onchange="histCall(this.value), hmCall(this.value)">   
-                                    
-                                    <a href="javascript:void();" id="calculate">get table</a>
+                                                                      
+                                    <a href="javascript:void();" id="calculate">Mostrar Tablas</a>
                                     
                                     </div>
 
                                     <select class="custom-select">
-                                        <option selected>Open this select menu</option>
-                                        <option value="1">One</option>
-                                        <option value="2">Two</option>
-                                        <option value="3">Three</option>
+                                        <option value="pronostico">Pronóstico</option>
+                                        <option value="clasificacion">Clasificación</option>
                                     </select>
+                                    
                                 </div>
                             </div>
                         </div>
 
                         <!-- Seleccion -->
-                        <div class="col-xl-3 col-lg-2">
+                        <div class="col-xl-10 col-lg-8">
                             <div class="card shadow mb-4">
                                 <!-- Card Header - Dropdown -->
                                 <div
                                     class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Carga de CSV</h6>
+                                    <h6 class="m-0 font-weight-bold text-primary">Selección de Parámetros</h6>
                                     <div class="dropdown no-arrow">
                                         <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
                                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -362,7 +350,26 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    
+                                    <div class="container-fluid" onchange="arboles(fileName.value,valorX.value,valorY.value)">
+                                        Selección de Variables Predictoras
+                                        <select class="selectpicker" multiple data-live-search="true" name = "valorX" id = "valorX">
+                                            {% for column in table %}
+                                                <option value="{{column}}" onchange="">{{ column }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <p></p>
+
+                                        <div class="form-inline">
+                                            Selección de Variable a Pronosticar 
+                                            <select class="custom-select" name = "valorY" id = "valorY">
+                                                {% for column in table %}
+                                                    <option value="{{column}}" onchange="">{{ column }}</option>
+                                                {% endfor %}
+                                            </select>
+
+                                        </div>
+                                        
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -419,12 +426,8 @@
     </div>
 
     <script>
-        histCall("melb_data.csv");
+        arboles("DiabeticRetinopathy.csv");
     </script>
-
-<script>
-    hmCall("melb_data.csv");
-</script>
 
     <!-- Flask -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -432,7 +435,7 @@
 
    <!-- Bootstrap core JavaScript-->
    <script src="{{url_for('static', filename='vendor/jquery/jquery.min.js')}}"></script>
-   <script src="{{url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js')}}"></script>
+   <!--script src="{{url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js')}}"></script-->
 
    <!-- Core plugin JavaScript -->
    <script src="{{url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js')}}"></script>

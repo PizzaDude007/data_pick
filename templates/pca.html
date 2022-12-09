@@ -30,6 +30,16 @@
         bsCustomFileInput.init()
         })
     </script-->
+
+    <script>
+        function pca(selection) {
+            $.getJSON({
+                url: "/pca", data: { 'fileData': selection }, success: function (result) {
+                }
+            });
+        }
+    </script>
+
     <script>
         function varCall(selection) {
             $.getJSON({
@@ -343,10 +353,11 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <h4>Upload your CSV file</h4>
+                                    <h6>Carga o Selecciona Archivo</h6>
                                     <form method="POST" action="" enctype="multipart/form-data">
                                     <p><input type="file" name="file"></p>
                                     <p><input type="submit" value="Submit"></p>
+                                    <input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), scattCall(this.value), scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value), changeText(this.value)">  
                                     </form>
 
                                     <p>Select DF</p>
@@ -356,11 +367,9 @@
                                     </div>
                             
                                     <div>
-                                    <p>File</p>
-                                    <input type="text" name="fileName" id="fileName" value='Hipoteca.csv' onchange="hmCall(this.value), scattCall(this.value), scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value), changeText(this.value)">   
+                                                                      
+                                    <a href="javascript:void();" id="calculate">Mostrar Tablas</a>
                                     
-                                    <a href="javascript:void();" id="calculate">get table</a>
-                                        
                                     </div>
                                 </div>
                             </div>
@@ -535,10 +544,10 @@
                                     <h6 class="m-0 font-weight-bold text-primary">Gráfico de Dispersión</h6>
                                 </div>
                                 <!-- Card Body -->
-                                <div class="card-body" name="ddScatt" id="ddScatt" onchange="scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value)">
+                                <div class="card-body" name="ddScatt" id="ddScatt" onchange="scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value)">                               
                                     Establecer Eje X
                                     <select class="custom-select" name = "valorX" id = "valorX" >
-                                        {% for column in pd.read_csv('static/csv/'+'Hipoteca.csv') %}
+                                        {% for column in table %}
                                             <option value="{{column}}" onchange="">{{ column }}</option>
                                         {% endfor %}
                                     </select>
@@ -609,6 +618,10 @@
             </div>
         </div>
     </div>
+
+    <script>
+        pca("Hipoteca.csv");
+    </script>
 
     <script>
         varCall("Hipoteca.csv");
