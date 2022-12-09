@@ -23,6 +23,13 @@ app.config["DEBUG"] = True
 UPLOAD_FOLDER = 'static/csv'
 app.config['UPLOAD_FOLDER'] =  UPLOAD_FOLDER
 
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+class names:
+    fileEDA = 'melb_data.csv'
+    filePCA = 'Hipoteca.csv'
+    fileArboles = 'DiabeticRetinopathy.csv'
+
 # -------- PAGINAS ---------------------------------------------------
 
 # Root URL
@@ -48,7 +55,10 @@ def uploadFilesEDA():
 
 @app.route('/pca')
 def pca():
-    return render_template('pca.html')
+    #df = pd.read_csv('https://raw.githubusercontent.com/PizzaDude007/MineriaDatos/main/Datos/Hipoteca.csv')
+    df = pd.read_csv('static/csv/'+names.filePCA)
+
+    return render_template('pca.html', table=df, pd=pd)
 
 # Get the uploaded files
 @app.route("/pca", methods=['POST'])
@@ -110,7 +120,30 @@ def histCall():
 def histogram(name='melb_data.csv'):
     df = pd.read_csv('static/csv/'+name)
 
-    fig = px.histogram(df, x=df.columns[2])
+    fig = go.Figure()
+
+    # Carga multiples graficos para poder cambiar
+    for column in df.columns:
+        fig.add_trace(
+            go.Histogram(x=df[column])
+        )
+
+    # Crea de forma dinamica el boton para cada grafico
+    def create_button(column):
+        return dict(label = column,
+                    method = 'update',
+                    args = [{'visible': df.columns.isin([column]),
+                             'title': column,
+                             'showlegend': True}])
+
+    # Guarda cada boton para acceder, por medio de función lambda
+    fig.update_layout(
+        updatemenus=[go.layout.Updatemenu(
+            active=0,
+            buttons=(list(df.columns.map(lambda column: create_button(column)))),
+            )
+        ]
+    )
 
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     return graphJSON
@@ -172,15 +205,28 @@ def scattGraph(name='Hipoteca.csv'):
 # Small Scatter Plot 
 @app.route('/scattSmall', methods=['POST','GET'])
 def scattCall2():
-    return scattGraph2(request.args.get('data'))
+    return scattGraph2(request.args.get('data'), request.args.get('valorX'), request.args.get('valorY'), request.args.get('color'))
 
-def scattGraph2(name='Hipoteca.csv'):
+def scattGraph2(name=names.filePCA, x = 'gastos_comunes', y='vivienda', color='ingresos'):
     df = pd.read_csv('static/csv/'+name)
 
-    fig = px.scatter_matrix(df, dimensions=[df.columns[0], df.columns[1]], color=df.columns[-1])
+    #print(str(x)+str(y)+str(color))
+
+    #fig = px.scatter_matrix(df, dimensions=[df.columns[1], df.columns[0]], color=df.columns[-1])
+    #fig = px.scatter(df, x=df.columns[0], y=df.columns[1], color=df.columns[-1])
+    fig = px.scatter(df, x=x, y=y, color=color)
 
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     return graphJSON
+
+@app.route('/testScatter', methods=['POST','GET'])
+def scatterTest():
+    filename = request.args.get('fileName')
+    x = request.args.get('valorX')
+    y = request.args.get('valorY')
+    color = request.args.get('color')
+
+    print(str(x)+str(y)+str(color))
 
 # ------ Para tablas -------------------------------------------------
 

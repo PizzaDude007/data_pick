@@ -22,8 +22,14 @@
 
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!--script>src="https://cdn.jsdelivr.net/npm/bs-custom-file-input/dist/bs-custom-file-input.min.js"</script-->
 
     <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
+    <!--script>
+        $(document).ready(function () {
+        bsCustomFileInput.init()
+        })
+    </script-->
     <script>
         function varCall(selection) {
             $.getJSON({
@@ -65,9 +71,9 @@
 </script>
 
 <script>
-    function scattCall2(selection) {
+    function scattCall2(selection, xData, yData, colorData) {
         $.getJSON({
-            url: "/scattSmall", data: { 'data': selection }, success: function (result) {
+            url: "/scattSmall", data: { 'data': selection, 'valorX': xData, 'valorY': yData, 'color': colorData}, success: function (result) {
                 Plotly.react('scatterSmall', result, {});;
             }
         });
@@ -346,12 +352,12 @@
                                     <p>Select DF</p>
 
                                     <div class="header">
-                                    <h3 class="text-muted">Create a pretty table</h3>
+                                    <h3 class="text-muted">Crear tabla</h3>
                                     </div>
                             
                                     <div>
                                     <p>File</p>
-                                    <input type="text" name="fileName" id="fileName" value='Hipoteca.csv' onchange="varCall(this.value), hmCall(this.value), scattCall(this.value), scattCall2(this.value)">   
+                                    <input type="text" name="fileName" id="fileName" value='Hipoteca.csv' onchange="hmCall(this.value), scattCall(this.value), scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value), changeText(this.value)">   
                                     
                                     <a href="javascript:void();" id="calculate">get table</a>
                                         
@@ -529,7 +535,26 @@
                                     <h6 class="m-0 font-weight-bold text-primary">Gráfico de Dispersión</h6>
                                 </div>
                                 <!-- Card Body -->
-                                <div class="card-body">
+                                <div class="card-body" name="ddScatt" id="ddScatt" onchange="scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value)">
+                                    Establecer Eje X
+                                    <select class="custom-select" name = "valorX" id = "valorX" >
+                                        {% for column in pd.read_csv('static/csv/'+'Hipoteca.csv') %}
+                                            <option value="{{column}}" onchange="">{{ column }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    Establecer Eje Y
+                                    <select class="custom-select" name = "valorY" id="valorY">
+                                        {% for column in table %}
+                                            <option value="{{column}}" onchange="">{{ column }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    Establecer Color del gráfico
+                                    <select class="custom-select" name = "color" id="color">
+                                        {% for column in table %}
+                                            <option value="{{column}}" onchange="">{{ column }}</option>
+                                        {% endfor %}
+                                    </select>
+
                                     <div id="scatterSmall" class="scatterSmall"></div>
                                 </div>
                             </div>
@@ -598,7 +623,7 @@
     </script>
 
     <script>
-        scattCall2("Hipoteca.csv");
+        scattCall2("Hipoteca.csv", 'gastos_comunes', 'vivienda', 'ingresos');
     </script>
 
     <!-- Flask -->
