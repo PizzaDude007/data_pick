@@ -32,7 +32,8 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 class names:
     fileEDA = 'melb_data.csv'
     filePCA = 'Hipoteca.csv'
-    fileArboles = 'DiabeticRetinopathy.csv'
+    fileArboles = 'diabetes.csv'
+    arbolesRes = {}
 
 # -------- PAGINAS ---------------------------------------------------
 
@@ -87,20 +88,50 @@ def uploadFilesPCA():
 
     #return render_template('pca.html', table=df, pd=pd)
 
+@app.route('/pronAB', methods=['POST', 'GET'])
+def pronAB():
+    fileName = request.args.get('fileData')
+    x = request.args.get('valorX')
+    y = request.args.get('valorY')
+    if (fileName is not None):
+        names.fileArboles = fileName
+
+    df = pd.read_csv('static/csv/'+names.fileArboles)
+
+    print('Internal: '+str(names.fileArboles))
+    print('External: '+str(fileName))
+
+    if (x is not None and y is not None):
+        print(str(x))
+        #print(y)
+        names.arbolesRes = train(df, x, y)
+        #print(names.arbolesRes['X'])
+        #print(names.arbolesRes)
+    
+    return render_template('arboles.html', table=df, nameData=names.fileArboles, res=names.arbolesRes)
+
+
 @app.route('/arboles')
 def arboles():
     fileName = request.args.get('fileData')
     x = request.args.get('valorX')
     y = request.args.get('valorY')
-    if (names.fileArboles is not None and fileName is not None):
+    if (fileName is not None):
         names.fileArboles = fileName
-    
+
     df = pd.read_csv('static/csv/'+names.fileArboles)
 
-    if (x is not None and y is not None):
-        resultado = train(df, x, y)
+    print('Internal: '+str(names.fileArboles))
+    print('External: '+str(fileName))
 
-    return render_template('arboles.html', table=df, nameData=names.fileArboles, res=resultado)
+    if (x is not None and y is not None):
+        print(str(x))
+        #print(y)
+        names.arbolesRes = train(df, x, y)
+        print(names.arbolesRes['X'])
+        #print(names.arbolesRes)
+    
+    return render_template('arboles.html', table=df, nameData=names.fileArboles, res=names.arbolesRes)
 
 # Get the uploaded files
 @app.route("/arboles", methods=['POST'])
@@ -133,7 +164,19 @@ def uploadFilesBosques():
 
 # Entrenar variables
 def train(df, x, y, arbol=True):
-    X_train, X_test, Y_train, Y_test = model_selection.train_test_split(x, y, 
+    #X = np.array(df[[x]])
+    #X = x
+    xNames = df[['Pregnancies', 
+                       'Glucose', 
+                       'BloodPressure', 
+                       'SkinThickness', 
+                       'Insulin', 
+                       'BMI',
+                       'DiabetesPedigreeFunction',
+                       'Age']]
+    X = np.array(xNames)
+    Y = np.array(df[[y]])
+    X_train, X_test, Y_train, Y_test = model_selection.train_test_split(X, Y, 
                                                                     test_size = 0.2, 
                                                                     random_state = 0, 
                                                                     shuffle = True)
@@ -147,7 +190,7 @@ def train(df, x, y, arbol=True):
     Valores = pd.DataFrame(Y_test, Y_Pronostico)
     Score = r2_score(Y_test, Y_Pronostico)
 
-    return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score}
+    return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score, 'X':xNames}
 
 
 # -------- Graficas ---------------------------------------------------
