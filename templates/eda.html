@@ -119,6 +119,8 @@
                         <h6 class="collapse-header">Custom Utilities:</h6>
                         <a class="collapse-item" href="arboles">Árboles</a>
                         <a class="collapse-item" href="bosques">Bosques Aleatorios</a>
+                        <a class="collapse-item" href="segmentacion">Segmentación</a>
+                        <a class="collapse-item" href="soporte_vectorial">Soporte Vectorial</a>
                         <!--a class="collapse-item" href="utilities-animation.html">Animations</a>
                         <a class="collapse-item" href="utilities-other.html">Other</a-->
                     </div>
@@ -264,9 +266,9 @@
                                     <script type="text/javascript">
                                     $(document).ready(function() {
                                         var table = null;
-                                        $('a#calculate').bind('click', function() {
+                                        $('#calculate').bind('click', function() {
                                         $.getJSON('/_get_table', {
-                                            fileName: $('input[name="fileName"]').val()
+                                            fileName: document.getElementById("fileName").value
                                         }, function(data) {
                                             $("#elements").text(data.number_elements);
                                             if (table !== null) {
@@ -317,29 +319,36 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <h4>Upload your CSV file</h4>
+                                    <h6>Carga o Selecciona Archivo</h6>
                                     <form method="POST" action="" enctype="multipart/form-data">
-                                    <p><input type="file" name="file"></p>
-                                    <p><input type="submit" value="Submit"></p>
+                                        <p><input type="file" name="file" accept=".csv"></p>
+                                        <p>Actualizar Datos</p>
+                                        <p><input type="submit" value="Submit"></p>
+                                        <!--input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), changeText(this.value)"-->  
+                                        <select class="custom-select" name="fileName" id="fileName" onchange="pca(this.value), hmCall(this.value), changeText(this.value), arboles(this.value)">
+                                            {% for archivo in csv_list %}
+                                                {% if archivo == nameData %}
+                                                    <option class="dropdown-item" name="{{archivo}}" id="{{archivo}}" selected>{{archivo}}</a>
+                                                {% else %}
+                                                    <option class="dropdown-item" name="{{archivo}}" id="{{archivo}}">{{archivo}}</a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <p></p>
+                                        <button type="button" class="btn btn-primary btn-lg btn-block" href="javascript:void();" id="calculate">Mostrar Datos</button>
+                                        <p></p>
+                                        <select class="custom-select">
+                                            <option value="pronostico">Pronóstico</option>
+                                            <option value="clasificacion">Clasificación</option>
+                                        </select>
                                     </form>
-
-                                    <p>Select DF</p>
-
-                                    <div class="header">
-                                    <h3 class="text-muted">Create a pretty table</h3>
-                                    </div>
-                            
-                                    <div>
-                                    <p>File</p>
-                                    <input type="text" name="fileName" id="fileName" value='melb_data.csv' onchange="histCall(this.value), hmCall(this.value)">   
                                     
-                                    <a href="javascript:void();" id="calculate">get table</a>
-                                        
-                                    </div>
+                                    
                                 </div>
                             </div>
                         </div>
 
+                        
                         <!-- Histogramas -->
                         <div class="col-xl-6 col-lg-9">
                             <div class="card shadow mb-4">

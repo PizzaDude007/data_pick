@@ -11,6 +11,8 @@ import plotly.graph_objects as go
 import os
 from os.path import join, dirname, realpath
 
+import github
+
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, MinMaxScaler 
 from sklearn import model_selection
@@ -29,10 +31,18 @@ app.config['UPLOAD_FOLDER'] =  UPLOAD_FOLDER
 
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-class names:
+csv_list = []
+
+# session.file
+
+class session:
+    fileSelected = 'Hipoteca.csv'
+    url = ''
     fileEDA = 'melb_data.csv'
     filePCA = 'Hipoteca.csv'
     fileArboles = 'diabetes.csv'
+    fileSegmentacion = 'diabetes.csv'
+    fileSoporteVectorial = 'diabetes.csv'
     arbolesRes = {}
 
 # -------- PAGINAS ---------------------------------------------------
@@ -44,127 +54,114 @@ def index():
 
 @app.route('/eda')
 def eda():
-    return render_template('eda.html')
+    update_csv_dir()
+    session.url = url_for('eda')
+    return render_template('eda.html', csv_list=csv_list)
 
-# Get the uploaded files
+# Get the uploaded files for eda
 @app.route("/eda", methods=['POST'])
 def uploadFilesEDA():
-      # get the uploaded file
-      uploaded_file = request.files['file']
-      if uploaded_file.filename != '':
-           file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
-          # set the file path
-           uploaded_file.save(file_path)
-          # save the file
-      return redirect(url_for('eda'))
+    return uploadFiles()
 
 @app.route('/pca')
 def pca():
+    update_csv_dir()
+    session.url = url_for('pca')
     #df = pd.read_csv('https://raw.githubusercontent.com/PizzaDude007/MineriaDatos/main/Datos/Hipoteca.csv')
     fileName = request.args.get('fileData')
     
-    if (names.filePCA is not None and fileName is not None):
-        names.filePCA = fileName
+    if (session.fileSelected is not None and fileName is not None):
+        session.fileSelected = fileName
 
-    print('Internal: '+str(names.filePCA))
+    print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
     
-    df = pd.read_csv('static/csv/'+names.filePCA)
+    df = pd.read_csv('static/csv/'+session.fileSelected)
 
-    return render_template('pca.html', table=df, pd=pd, nameData=names.filePCA)
+    return render_template('pca.html', table=df, pd=pd, nameData=session.fileSelected, csv_list=csv_list)
 
-# Get the uploaded files
+# Get the uploaded files for pca
 @app.route("/pca", methods=['POST'])
 def uploadFilesPCA():
-    # get the uploaded file
-    uploaded_file = request.files['file']
-    if uploaded_file.filename != '':
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
-        # set the file path
-        uploaded_file.save(file_path)
-        # save the file
-    return redirect(url_for('pca'))
-    #df = pd.read_csv('static/csv/'+names.filePCA)
-
-    #return render_template('pca.html', table=df, pd=pd)
-
-@app.route('/pronAB', methods=['POST', 'GET'])
-def pronAB():
-    fileName = request.args.get('fileData')
-    x = request.args.get('valorX')
-    y = request.args.get('valorY')
-    if (fileName is not None):
-        names.fileArboles = fileName
-
-    df = pd.read_csv('static/csv/'+names.fileArboles)
-
-    print('Internal: '+str(names.fileArboles))
-    print('External: '+str(fileName))
-
-    if (x is not None and y is not None):
-        print(str(x))
-        #print(y)
-        names.arbolesRes = train(df, x, y)
-        #print(names.arbolesRes['X'])
-        #print(names.arbolesRes)
-    
-    return render_template('arboles.html', table=df, nameData=names.fileArboles, res=names.arbolesRes)
-
+    return uploadFiles()
 
 @app.route('/arboles')
 def arboles():
-    fileName = request.args.get('fileData')
-    x = request.args.get('valorX')
-    y = request.args.get('valorY')
-    if (fileName is not None):
-        names.fileArboles = fileName
+    update_csv_dir()
+    session.url = url_for('arboles')
+    fileName = request.args.get('fileName')
+    x = request.args.getlist('valorX') # Variables Predictoras
+    y = request.args.get('valorY') # Variable a Pronosticas
 
-    df = pd.read_csv('static/csv/'+names.fileArboles)
+    df = pd.read_csv('static/csv/'+session.fileSelected)
+    pronostico = ''
 
-    print('Internal: '+str(names.fileArboles))
+    print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
 
     if (x is not None and y is not None):
         print(str(x))
         #print(y)
-        names.arbolesRes = train(df, x, y)
-        print(names.arbolesRes['X'])
-        #print(names.arbolesRes)
+        session.arbolesRes = train(df, x, y)
+        #print("Variables Precitoras: ")
+        #print(session.arbolesRes['X'])
+        #print("Variable a Predecir: ")
+        #print(session.arbolesRes['Y_Pronostico'])
+        
+        dictOpciones = {}
+        for name in session.arbolesRes['X']:
+            if(request.args.get(name) is not None or request.args.get(name) is FileNotFoundError):
+                dictOpciones[name] = float(request.args.get(name))
+                print(dictOpciones[name])
+                pronostico = str(obtener_pronostico(dictOpciones, session.arbolesRes['Pronostico']))
     
-    return render_template('arboles.html', table=df, nameData=names.fileArboles, res=names.arbolesRes)
+    return render_template('arboles.html', table=df, nameData=session.fileSelected, res=session.arbolesRes, pronostico=pronostico, csv_list=csv_list)
 
 # Get the uploaded files
 @app.route("/arboles", methods=['POST'])
 def uploadFilesArboles():
-      # get the uploaded file
-      uploaded_file = request.files['file']
-      if uploaded_file.filename != '':
-           file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
-          # set the file path
-           uploaded_file.save(file_path)
-          # save the file
-      return redirect(url_for('arboles'))
+    return uploadFiles()
 
 @app.route('/bosques')
 def bosques():
-    return render_template('bosques.html')
+    update_csv_dir()
+    session.url = url_for('bosques')
+    return render_template('bosques.html', csv_list=csv_list)
 
 # Get the uploaded files
 @app.route("/bosques", methods=['POST'])
 def uploadFilesBosques():
-      # get the uploaded file
-      uploaded_file = request.files['file']
-      if uploaded_file.filename != '':
-           file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
-          # set the file path
-           uploaded_file.save(file_path)
-          # save the file
-      return redirect(url_for('bosques'))
+    return uploadFiles()
 
+# Segmentacion
+@app.route('/segmentacion')
+def segmentacion():
+    update_csv_dir()
+    session.url = url_for('segmentacion')
+    return render_template('segmentacion.html', csv_list=csv_list)
+
+# Get the uploaded files for segmentacion
+@app.route("/segmentacion", methods=['POST'])
+def uploadFilesSegmentacion():
+    return uploadFiles()
+
+# Soporte vectorial
+@app.route('/soporte_vectorial')
+def soporte_vectorial():
+    update_csv_dir()
+    session.url = url_for('soporte_vectorial')
+    return render_template('soporte_vectorial.html', csv_list=csv_list)
+
+# Get the uploaded files for soporte vectorial
+@app.route("/soporte_vectorial", methods=['POST'])
+def uploadFilesSoporteVectorial():
+    return uploadFiles()
+
+# --------- Funcionalidad ------------------
 
 # Entrenar variables
 def train(df, x, y, arbol=True):
-    #X = np.array(df[[x]])
+    X = np.array(df[x])
     #X = x
     xNames = df[['Pregnancies', 
                        'Glucose', 
@@ -174,7 +171,7 @@ def train(df, x, y, arbol=True):
                        'BMI',
                        'DiabetesPedigreeFunction',
                        'Age']]
-    X = np.array(xNames)
+    #X = np.array(xNames)
     Y = np.array(df[[y]])
     X_train, X_test, Y_train, Y_test = model_selection.train_test_split(X, Y, 
                                                                     test_size = 0.2, 
@@ -190,8 +187,39 @@ def train(df, x, y, arbol=True):
     Valores = pd.DataFrame(Y_test, Y_Pronostico)
     Score = r2_score(Y_test, Y_Pronostico)
 
-    return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score, 'X':xNames}
+    return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score, 'X':x}
 
+def obtener_pronostico(values, Pronostico):
+    df = pd.DataFrame(values)
+    return Pronostico.predict(df)[0]
+
+@app.route("/ajax_parametros",methods=["POST","GET"])
+def ajax_add():
+    if request.method == 'POST':
+        hidden_valorX = request.form['hidden_valorX']
+        print(hidden_valorX)     
+        msg = 'New record created successfully'  
+    return redirect(url_for('arboles'))
+
+def update_csv_dir():
+    # Local  files
+    for path in os.listdir('static/csv/'):
+        # verificar archivo actual
+        if path not in csv_list and os.path.isfile(os.path.join('static/csv/', path)):
+            csv_list.append(path)
+
+def uploadFiles():
+    # get the uploaded file
+    uploaded_file = request.files['file']
+    name = uploaded_file.filename
+    print("fileName: "+str(request.args.get('fileName')))
+    if uploaded_file.filename != '':
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], name)
+        # set the file path
+        uploaded_file.save(file_path)
+        # save the file
+        session.fileSelected = name
+    return redirect(session.url)
 
 # -------- Graficas ---------------------------------------------------
 
@@ -295,7 +323,7 @@ def scattGraph(name='Hipoteca.csv'):
 def scattCall2():
     return scattGraph2(request.args.get('data'), request.args.get('valorX'), request.args.get('valorY'), request.args.get('color'))
 
-def scattGraph2(name=names.filePCA, x = 'gastos_comunes', y='vivienda', color='ingresos'):
+def scattGraph2(name=session.fileSelected, x = 'gastos_comunes', y='vivienda', color='ingresos'):
     df = pd.read_csv('static/csv/'+name)
 
     #print(str(x)+str(y)+str(color))
@@ -323,6 +351,7 @@ def scatterTest():
 def get_table():
     fileName = request.args.get('fileName')
     df = pd.read_csv('static/csv/'+fileName)
+    session.fileSelected = fileName
 
     return jsonify(#number_elements=a * b,
                    my_table=json.loads(df.to_json(orient="split"))["data"],

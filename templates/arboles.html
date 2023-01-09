@@ -35,14 +35,14 @@
         $('select').selectpicker();
     </script>
     
-    <script>
-        function arboles(selection, xData, yData) {
+    <!--script>
+        function arboles(selection, xData, yData, pData) {
             $.getJSON({
-                url: "/arboles", data: { 'fileData': selection, 'valorX': xData, 'valorY': yData}, success: function (result) {
+                url: "/arboles", data: { 'fileData': selection, 'valorX': xData, 'valorY': yData, 'opciones': pData}, success: function (result) {
                 }
             });
         }
-    </script>
+    </script-->
 
 </head>
 
@@ -109,6 +109,8 @@
                         <h6 class="collapse-header">Custom Utilities:</h6>
                         <a class="collapse-item active" href="arboles">Árboles</a>
                         <a class="collapse-item" href="bosques">Bosques Aleatorios</a>
+                        <a class="collapse-item" href="segmentacion">Segmentación</a>
+                        <a class="collapse-item" href="soporte_vectorial">Soporte Vectorial</a>
                         <!--a class="collapse-item" href="utilities-animation.html">Animations</a>
                         <a class="collapse-item" href="utilities-other.html">Other</a-->
                     </div>
@@ -224,12 +226,12 @@
                 <div class="container-fluid">
 
                     <!-- Page Heading -->
-                    <h1 class="h3 mb-4 text-gray-800">Árboles de Decisión</h1>
+                    <h1 class="h3 mb-4 text-gray-800" id="web_page">Árboles de Decisión</h1>
 
                     <div class="row"> 
 
                         <!-- Ingresar Datos CSV -->
-                        <div class="col-xl-9 col-lg-8">
+                        <div class="col-xl-9 col-lg-8" style="width: 100%">
                             <div class="card shadow mb-4">
                                 <!-- Card Header - Dropdown -->
                                 <div
@@ -245,9 +247,9 @@
                                     <script type="text/javascript">
                                     $(document).ready(function() {
                                         var table = null;
-                                        $('a#calculate').bind('click', function() {
+                                        $('#calculate').bind('click', function() {
                                         $.getJSON('/_get_table', {
-                                            fileName: $('input[name="fileName"]').val()
+                                            fileName: document.getElementById("fileName").value
                                         }, function(data) {
                                             $("#elements").text(data.number_elements);
                                             if (table !== null) {
@@ -275,7 +277,7 @@
                         </div>
 
                         <!-- Table -->
-                        <div class="col-xl-3 col-lg-2">
+                        <div class="col-xl-3 col-lg-2" style="width: 100%">
                             <div class="card shadow mb-4">
                                 <!-- Card Header - Dropdown -->
                                 <div
@@ -298,36 +300,37 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <h6>Carga o Selecciona Archivo</h6>
+                                    <h5>Actualizar Datos</h5>
+                                    Carga o Selecciona Archivo
                                     <form method="POST" action="" enctype="multipart/form-data">
-                                    <p><input type="file" name="file"></p>
-                                    <p><input type="submit" value="Submit"></p>
-                                    <input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), scattCall(this.value), scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value), changeText(this.value)">  
+                                        <p><input type="file" name="file" accept=".csv"></p>
+                                        <!--input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), changeText(this.value)"-->  
+                                        <select class="custom-select" name="fileName" id="fileName" onchange="pca(this.value), hmCall(this.value), changeText(this.value), arboles(this.value)">
+                                            {% for archivo in csv_list %}
+                                                {% if archivo == nameData %}
+                                                    <option class="dropdown-item" name="{{archivo}}" id="{{archivo}}" selected>{{archivo}}</a>
+                                                {% else %}
+                                                    <option class="dropdown-item" name="{{archivo}}" id="{{archivo}}">{{archivo}}</a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <p></p>
+                                        <p><input type="submit" class="btn btn-primary btn-lg btn-block" value="Submit"></p>
+                                        <button type="button" class="btn btn-secondary btn-lg btn-block" href="javascript:void();" id="calculate">Mostrar Datos</button>
+                                        <p></p>
+                                        <select class="custom-select">
+                                            <option value="pronostico">Pronóstico</option>
+                                            <option value="clasificacion">Clasificación</option>
+                                        </select>
                                     </form>
-
-                                    <p>Select DF</p>
-
-                                    <div class="header">
-                                    <h3 class="text-muted">Crear tabla</h3>
-                                    </div>
-                            
-                                    <div>
-                                                                      
-                                    <a href="javascript:void();" id="calculate">Mostrar Tablas</a>
                                     
-                                    </div>
-
-                                    <select class="custom-select">
-                                        <option value="pronostico">Pronóstico</option>
-                                        <option value="clasificacion">Clasificación</option>
-                                    </select>
                                     
                                 </div>
                             </div>
                         </div>
 
                         <!-- Seleccion -->
-                        <div class="col-xl-20 col-lg-8">
+                        <div class="col-xl-9 col-lg-8" style="width: 100%">
                             <div class="card shadow mb-4">
                                 <!-- Card Header - Dropdown -->
                                 <div
@@ -350,54 +353,76 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <div class="container-fluid" onchange="arboles(fileName.value,valorX.value,valorY.value)">
+                                    <div class="container-fluid">
                                         Selección de Variables Predictoras
-
-
-                                        <select multiple class="selectpicker" multiple data-live-search="true" name = "valorX" id = "valorX">
-                                            {% for column in table %}
-                                                <option value="{{column}}" onchange="">{{ column }}</option>
-                                            {% endfor %}
-                                        </select>
-
-                                        <!--button id="submitAB">Calcular</button-->
-
-                                        <!--select multiple id="valorX" name="valorX">       
-                                            <option value="1">this</option>       
-                                            <option value="2">that</option>       
-                                            <option value="3">other thing</option>
-                                        </select-->
-                                        <p></p>
-
-                                        <div class="form-inline">
-                                            Selección de Variable a Pronosticar 
-                                            <select class="custom-select" name = "valorY" id = "valorY">
+                                        <form id="multiple_select_form">
+                                            <select class="selectpicker" multiple name = "valorX" id = "valorX">
                                                 {% for column in table %}
-                                                    <option value="{{column}}" onchange="">{{ column }}</option>
+                                                    {% if column in res['X'] %}
+                                                        <option value="{{column}}" onchange="" selected>{{ column }}</option>
+                                                    {% else %}
+                                                        <option value="{{column}}" onchange="" >{{ column }}</option>
+                                                    {% endif %}
                                                 {% endfor %}
                                             </select>
+    
+                                            <!--button id="submitAB">Calcular</button-->
+    
+                                            <!--select multiple id="valorX" name="valorX">       
+                                                <option value="1">this</option>       
+                                                <option value="2">that</option>       
+                                                <option value="3">other thing</option>
+                                            </select-->
+                                            <p></p>
+    
+                                            <div class="form-inline">
+                                                Selección de Variable a Pronosticar 
+                                                <select class="custom-select" name = "valorY" id = "valorY">
+                                                    {% for column in table %}
+                                                        <option value="{{column}}" onchange="">{{ column }}</option>
+                                                    {% endfor %}
+                                                </select>
+    
+                                            </div>
+    
+                                            <p><input type="submit" class="btn btn-light" value="Calcular"></p>
+                                            <p><input type="hidden" value="hidden_valorX" id="hidden_valorX"></p>
 
-                                        </div>
+                                        </form>
 
-                                        
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {% if res['Score'] %}
                         <!-- Realizar Prediccion -->
-                        <div class="col-xl-20 col-lg-8">
+                        <div class="col-xl-3 col-lg-2" style="width: 100%">
                             <div class="card shadow mb-4">
                                 <!-- Card Header - Dropdown -->
-                                <div
-                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <h3>Score</h3>
+                                    <h6>{{res['Score']}}</h6>
+                                </div>
+                            </div>
+                            
+                        </div>
+
+                        
+                        <!-- Nuevos Pronósticos -->
+                        <div class="col-xl-7 col-lg-5" style="width:100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                                     <h6 class="m-0 font-weight-bold text-primary">Nuevos Pronósticos</h6>
                                     <div class="dropdown no-arrow">
                                         <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                                            </a>
+                                            <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
                                             aria-labelledby="dropdownMenuLink">
                                             <div class="dropdown-header">Dropdown Header:</div>
                                             <a class="dropdown-item" href="#">Action</a>
@@ -407,20 +432,27 @@
                                         </div>
                                     </div>
                                 </div>
+
                                 <!-- Card Body -->
-                                <div class="card-body">
-                                    <div class="form-group">
+                                <div class="card-body text-right">
+                                    <div class="form" >
                                         <!-- TODO agregar JINJA para que sea de acuerdo a los parámetros -->
                                         {% for column in res['X'] %}
-                                            <label for="{{column}}">{{column}}</label>
-                                            <input type="text" class="form-control" id="{{column}}" placeholder="Example input placeholder">
+                                        <div class="form-group row">
+                                            <label for="{{column}}" class="col-sm-5 col-form-label">{{column}}</label>
+                                            <div class="col-sm-4">
+                                                <input type="text" class="form-control" name="{{column}}" id="{{column}}" placeholder="Inserte contenido">
+                                            </div>
+                                        </div>
                                         {% endfor %}
+                                        <input type="submit" class="btn btn-light" value="Obtener">
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
 
+
+                        {% endif %}
 
                     </div>
                 </div>
@@ -472,8 +504,44 @@
     </div>
 
     <script>
-        arboles("DiabeticRetinopathy.csv");
+        arboles("diabetes.csv");
     </script>
+
+    <!-- TODO Finish script-->
+    <!--script>
+        $(document).ready(function(){
+            $('.selectpicker').selectpicker();
+
+            $('#valorX').change(function(){
+                $('#hidden_valorX').val($('#valorX').val());
+            });
+
+            $('#multiple_select_form').on('submitX', function(event){
+                event.preventDefault();
+                if($('#valorX').val() != '')
+                {
+                var form_data = $(this).serialize();
+                $.ajax({
+                    url:"/ajax_parametros",
+                    method:"POST",
+                    data:form_data,
+                    success:function(data)
+                    {
+                    //console.log(data);
+                    $('#hidden_valorX').val('');
+                    $('.selectpicker').selectpicker('val', '');
+                    alert(data);
+                    }
+                })
+                }
+                else
+                {
+                alert("Seleccionar Variables Predictoras");
+                return false;
+                }
+            });
+        });
+    </script-->
 
     <!-- Flask -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
