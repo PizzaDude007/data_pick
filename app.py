@@ -11,8 +11,6 @@ import plotly.graph_objects as go
 import os
 from os.path import join, dirname, realpath
 
-import github
-
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, MinMaxScaler 
 from sklearn import model_selection
@@ -31,12 +29,14 @@ app.config['UPLOAD_FOLDER'] =  UPLOAD_FOLDER
 
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-csv_list = []
+repo = 'static/csv/'
+#repo = 'https://raw.githubusercontent.com/PizzaDude007/data_pick/main/static/csv/'
+csv_list = ['DiabeticRetinopathy.csv', 'DiabeticRetinopathy.csv', 'WDBCOriginal.csv', 'diabetes.csv', 'melb_data.csv']
 
 # session.file
 
 class session:
-    fileSelected = 'Hipoteca.csv'
+    fileSelected = 'diabetes.csv'
     url = ''
     fileEDA = 'melb_data.csv'
     filePCA = 'Hipoteca.csv'
@@ -59,7 +59,7 @@ def eda():
     return render_template('eda.html', csv_list=csv_list)
 
 # Get the uploaded files for eda
-@app.route("/eda", methods=['POST'])
+@app.route("/eda", methods=['POST', 'GET'])
 def uploadFilesEDA():
     return uploadFiles()
 
@@ -76,12 +76,12 @@ def pca():
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
     
-    df = pd.read_csv('static/csv/'+session.fileSelected)
+    df = pd.read_csv(repo+session.fileSelected)
 
     return render_template('pca.html', table=df, pd=pd, nameData=session.fileSelected, csv_list=csv_list)
 
 # Get the uploaded files for pca
-@app.route("/pca", methods=['POST'])
+@app.route("/pca", methods=['POST', 'GET'])
 def uploadFilesPCA():
     return uploadFiles()
 
@@ -93,7 +93,7 @@ def arboles():
     x = request.args.getlist('valorX') # Variables Predictoras
     y = request.args.get('valorY') # Variable a Pronosticas
 
-    df = pd.read_csv('static/csv/'+session.fileSelected)
+    df = pd.read_csv(repo+session.fileSelected)
     pronostico = ''
 
     print('Internal: '+str(session.fileSelected))
@@ -118,7 +118,7 @@ def arboles():
     return render_template('arboles.html', table=df, nameData=session.fileSelected, res=session.arbolesRes, pronostico=pronostico, csv_list=csv_list)
 
 # Get the uploaded files
-@app.route("/arboles", methods=['POST'])
+@app.route("/arboles", methods=['POST', 'GET'])
 def uploadFilesArboles():
     return uploadFiles()
 
@@ -129,7 +129,7 @@ def bosques():
     return render_template('bosques.html', csv_list=csv_list)
 
 # Get the uploaded files
-@app.route("/bosques", methods=['POST'])
+@app.route("/bosques", methods=['POST', 'GET'])
 def uploadFilesBosques():
     return uploadFiles()
 
@@ -141,7 +141,7 @@ def segmentacion():
     return render_template('segmentacion.html', csv_list=csv_list)
 
 # Get the uploaded files for segmentacion
-@app.route("/segmentacion", methods=['POST'])
+@app.route("/segmentacion", methods=['POST', 'GET'])
 def uploadFilesSegmentacion():
     return uploadFiles()
 
@@ -153,7 +153,7 @@ def soporte_vectorial():
     return render_template('soporte_vectorial.html', csv_list=csv_list)
 
 # Get the uploaded files for soporte vectorial
-@app.route("/soporte_vectorial", methods=['POST'])
+@app.route("/soporte_vectorial", methods=['POST', 'GET'])
 def uploadFilesSoporteVectorial():
     return uploadFiles()
 
@@ -203,9 +203,9 @@ def ajax_add():
 
 def update_csv_dir():
     # Local  files
-    for path in os.listdir('static/csv/'):
+    for path in os.listdir(repo):
         # verificar archivo actual
-        if path not in csv_list and os.path.isfile(os.path.join('static/csv/', path)):
+        if path not in csv_list and os.path.isfile(os.path.join(repo, path)):
             csv_list.append(path)
 
 def uploadFiles():
@@ -234,7 +234,7 @@ def histCall():
     return histogram(request.args.get('data'))
 
 def histogram(name='melb_data.csv'):
-    df = pd.read_csv('static/csv/'+name)
+    df = pd.read_csv(repo+name)
 
     fig = go.Figure()
 
@@ -270,7 +270,7 @@ def hMap():
     return hMapGraph(request.args.get('data'))
 
 def hMapGraph(name='melb_data.csv'):
-    df = pd.read_csv('static/csv/'+name)
+    df = pd.read_csv(repo+name)
 
     df = df.corr()
 
@@ -290,7 +290,7 @@ def varCall():
     return varGraph(request.args.get('data'))
 
 def varGraph(name='Hipoteca.csv'):
-    df = pd.read_csv('static/csv/'+name)
+    df = pd.read_csv(repo+name)
 
     Estandarizar = StandardScaler()
     MEstandarizada = Estandarizar.fit_transform(df)
@@ -311,7 +311,7 @@ def scattCall():
     return scattGraph(request.args.get('data'))
 
 def scattGraph(name='Hipoteca.csv'):
-    df = pd.read_csv('static/csv/'+name)
+    df = pd.read_csv(repo+name)
 
     fig = px.scatter_matrix(df, color=df.columns[-1])
 
@@ -324,7 +324,7 @@ def scattCall2():
     return scattGraph2(request.args.get('data'), request.args.get('valorX'), request.args.get('valorY'), request.args.get('color'))
 
 def scattGraph2(name=session.fileSelected, x = 'gastos_comunes', y='vivienda', color='ingresos'):
-    df = pd.read_csv('static/csv/'+name)
+    df = pd.read_csv(repo+name)
 
     #print(str(x)+str(y)+str(color))
 
@@ -350,7 +350,7 @@ def scatterTest():
 @app.route('/_get_table')
 def get_table():
     fileName = request.args.get('fileName')
-    df = pd.read_csv('static/csv/'+fileName)
+    df = pd.read_csv(repo+fileName)
     session.fileSelected = fileName
 
     return jsonify(#number_elements=a * b,
@@ -361,7 +361,7 @@ def get_table():
 @app.route('/describe')
 def describe():
     fileName = request.args.get('fileName')
-    df = pd.read_csv('static/csv/'+fileName)
+    df = pd.read_csv(repo+fileName)
     df = df.describe()
 
     return jsonify(#number_elements=a * b,
@@ -372,7 +372,7 @@ def describe():
 @app.route('/corr')
 def corr():
     fileName = request.args.get('fileName')
-    df = pd.read_csv('static/csv/'+fileName)
+    df = pd.read_csv(repo+fileName)
     df = df.corr()
 
     return jsonify(#number_elements=a * b,
@@ -383,7 +383,7 @@ def corr():
 @app.route('/carComp')
 def carComp():
     fileName = request.args.get('fileName')
-    df = pd.read_csv('static/csv/'+fileName)
+    df = pd.read_csv(repo+fileName)
     
     Estandarizar = StandardScaler()
     MEstandarizada = Estandarizar.fit_transform(df)
