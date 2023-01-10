@@ -13,6 +13,7 @@
 
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.css" />
+    <link rel="stylesheet" href="Treant.css" type="text/css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
@@ -34,6 +35,16 @@
     <script>
         $('select').selectpicker();
     </script>
+
+    <!--script>
+        function generarArbol(selection) {
+            $.getJSON({
+                url: "/tree", data: { 'data': selection }, success: function (result) {
+                    Plotly.react('treePlot', result, {});;
+                }
+            });
+        }
+    </script-->
 
 </head>
 
@@ -375,10 +386,30 @@
                                                 </select>
     
                                             </div>
-    
                                             <p><input type="submit" class="btn btn-light" value="Calcular"></p>
                                             <p><input type="hidden" value="hidden_valorX" id="hidden_valorX"></p>
 
+                                            {% if res['Score'] %}
+                                            <h4>Modificar Parámetros del Árbol</h4> 
+                                            <div class="form-group row">
+                                                <label for="max_depth" class="col-sm-5 col-form-label">Profundidad Máxima</label>
+                                                <div class="col-sm-4">
+                                                    <input type="text" class="form-control" name="max_depth" id="max_depth" placeholder="Ejemplo: 10" value="{{params[0]}}">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label for="min_samples_split" class="col-sm-5 col-form-label">Minimo de muestras para dividir</label>
+                                                <div class="col-sm-4">
+                                                    <input type="text" class="form-control" name="min_samples_split" id="min_samples_split" placeholder="Ejemplo: 4" value="{{params[1]}}">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label for="min_samples_leaf" class="col-sm-5 col-form-label">Mínimo de muestras por hoja</label>
+                                                <div class="col-sm-4">
+                                                    <input type="text" class="form-control" name="min_samples_leaf" id="min_samples_leaf" placeholder="Ejemplo: 2" value="{{params[2]}}">
+                                                </div>
+                                            </div>
+                                            {% endif %}
                                         </form>
 
                                     </div>
@@ -399,6 +430,37 @@
                                 </div>
                             </div>
                             
+                        </div>
+
+                        <!-- Mostrar Arbol -->
+                        <div class="" style="width: 100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Árbol</h6>
+                                    <div class="dropdown no-arrow">
+                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                                            aria-labelledby="dropdownMenuLink">
+                                            <div class="dropdown-header">Dropdown Header:</div>
+                                            <a class="dropdown-item" href="#">Action</a>
+                                            <a class="dropdown-item" href="#">Another action</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="#">Something else here</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <div id="treePlot" class="treePlot">
+                                        <img src="/tree.png" class="img-fluid" alt="my plot">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         
@@ -426,7 +488,7 @@
 
                                 <!-- Card Body -->
                                 <div class="card-body text-right">
-                                    <div class="form" >
+                                    <form class="form" >
                                         <!-- TODO agregar JINJA para que sea de acuerdo a los parámetros -->
                                         {% for column in res['X'] %}
                                         <div class="form-group row">
@@ -436,13 +498,30 @@
                                             </div>
                                         </div>
                                         {% endfor %}
-                                        <input type="submit" class="btn btn-light" value="Obtener">
-                                    </div>
+                                        <div class="form-group row align-items-right">
+                                            <input type="submit" class="btn btn-light" value="Obtener">
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
 
-
+                        {% if pronostico %}
+                        <!-- Realizar Prediccion -->
+                        <div class="col-xl-3 col-lg-2" style="width: 100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <h3>Pronóstico</h3>
+                                    <h6>{{pronostico}}</h6>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        {% endif %}
+                        
                         {% endif %}
 
                     </div>
@@ -533,6 +612,9 @@
             });
         });
     </script-->
+    
+    <script src="vendor/raphael.js"></script>
+    <script src="Trant.min.js"></script>
 
     <!-- Flask -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>

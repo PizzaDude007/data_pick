@@ -1,5 +1,5 @@
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, Response
 import pandas as pd
 import numpy as np
 import json
@@ -7,16 +7,27 @@ import json
 import plotly
 import plotly.express as px
 import plotly.graph_objects as go
+import igraph
+from igraph import Graph, EdgeSeq
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
 
+import io
 import os
 from os.path import join, dirname, realpath
 
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, MinMaxScaler 
 from sklearn import model_selection
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, plot_tree
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, pairwise_distances_argmin_min, classification_report, confusion_matrix, accuracy_score
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.cluster import KMeans
+
+from kneed import KneeLocator
+#from sklearn.externals import joblib
 
 app = Flask(__name__)
 
@@ -44,6 +55,12 @@ class session:
     fileSegmentacion = 'diabetes.csv'
     fileSoporteVectorial = 'diabetes.csv'
     arbolesRes = {}
+    bosquesRes = {}
+    svmRes = {}
+    isRegression = True
+    MEstandarizada = None
+    MParticional = None
+    pd = pd.read_csv(repo+fileSelected)
 
 # -------- PAGINAS ---------------------------------------------------
 
@@ -75,7 +92,7 @@ def pca():
 
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
-    
+
     df = pd.read_csv(repo+session.fileSelected)
 
     return render_template('pca.html', table=df, pd=pd, nameData=session.fileSelected, csv_list=csv_list)
@@ -92,30 +109,36 @@ def arboles():
     fileName = request.args.get('fileName')
     x = request.args.getlist('valorX') # Variables Predictoras
     y = request.args.get('valorY') # Variable a Pronosticas
+    max_d = request.args.get('max_depth') # Profundidad Maxima
+    min_s = request.args.get('min_samples_split') # Minimo de muestras para dividir
+    min_l = request.args.get('min_samples_leaf') # Minimo de muestras por hoja
 
     df = pd.read_csv(repo+session.fileSelected)
     pronostico = ''
+    dparams = []
+    dictOpciones = {}
 
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
 
+    if ('X' in session.arbolesRes.keys()):
+        for name in session.arbolesRes['X']:
+            print(name+": "+str(request.args.get(name)))
+            if(request.args.get(name) is not None):
+                dictOpciones[name] = [float(request.args.get(name))]
+                print(dictOpciones[name])
+        pronostico = str(obtener_pronostico(dictOpciones, session.arbolesRes['Pronostico']))
+        #dfPronostico = pd.DataFrame.from_dict(dictOpciones)
+        #pronostico = str(session.arbolesRes['Pronostico'].predict(dfPronostico))
+
     if (x is not None and y is not None):
         print(str(x))
         #print(y)
-        session.arbolesRes = train(df, x, y)
-        #print("Variables Precitoras: ")
-        #print(session.arbolesRes['X'])
-        #print("Variable a Predecir: ")
-        #print(session.arbolesRes['Y_Pronostico'])
-        
-        dictOpciones = {}
-        for name in session.arbolesRes['X']:
-            if(request.args.get(name) is not None or request.args.get(name) is FileNotFoundError):
-                dictOpciones[name] = float(request.args.get(name))
-                print(dictOpciones[name])
-                pronostico = str(obtener_pronostico(dictOpciones, session.arbolesRes['Pronostico']))
+        session.arbolesRes = train(df, x, y, max_d, min_s, min_l, True, session.isRegression)
+        if (max_d is not None and min_s is not None and min_l is not None):
+            dparams = [max_d, min_s, min_l]
     
-    return render_template('arboles.html', table=df, nameData=session.fileSelected, res=session.arbolesRes, pronostico=pronostico, csv_list=csv_list)
+    return render_template('arboles.html', table=df, nameData=session.fileSelected, res=session.arbolesRes, pronostico=pronostico, csv_list=csv_list, params=dparams, isRegression=session.isRegression)
 
 # Get the uploaded files
 @app.route("/arboles", methods=['POST', 'GET'])
@@ -126,7 +149,37 @@ def uploadFilesArboles():
 def bosques():
     update_csv_dir()
     session.url = url_for('bosques')
-    return render_template('bosques.html', csv_list=csv_list)
+    fileName = request.args.get('fileName')
+    x = request.args.getlist('valorX') # Variables Predictoras
+    y = request.args.get('valorY') # Variable a Pronosticas
+    max_d = request.args.get('max_depth') # Profundidad Maxima
+    min_s = request.args.get('min_samples_split') # Minimo de muestras para dividir
+    min_l = request.args.get('min_samples_leaf') # Minimo de muestras por hoja
+
+    df = pd.read_csv(repo+session.fileSelected)
+    pronostico = ''
+    dparams = []
+    dictOpciones = {}
+
+    print('Internal: '+str(session.fileSelected))
+    print('External: '+str(fileName))
+
+    if ('X' in session.bosquesRes.keys()):
+        for name in session.bosquesRes['X']:
+            print(name+": "+str(request.args.get(name)))
+            if(request.args.get(name) is not None):
+                dictOpciones[name] = [float(request.args.get(name))]
+                print(dictOpciones[name])
+        pronostico = str(obtener_pronostico(dictOpciones, session.bosquesRes['Pronostico']))
+    
+    if (x is not None and y is not None):
+        print(str(x))
+        #print(y)
+        session.bosquesRes = train(df, x, y, max_d, min_s, min_l, False, session.isRegression)
+        if (max_d is not None and min_s is not None and min_l is not None):
+            dparams = [max_d, min_s, min_l]
+    
+    return render_template('bosques.html', table=df, nameData=session.fileSelected, res=session.bosquesRes, pronostico=pronostico, csv_list=csv_list, params=dparams, isRegression=session.isRegression)
 
 # Get the uploaded files
 @app.route("/bosques", methods=['POST', 'GET'])
@@ -138,7 +191,21 @@ def uploadFilesBosques():
 def segmentacion():
     update_csv_dir()
     session.url = url_for('segmentacion')
-    return render_template('segmentacion.html', csv_list=csv_list)
+    columnDrop = request.args.get('drop')
+    df = pd.read_csv(repo+session.fileSelected)
+
+    if columnDrop is not None and columnDrop != '':
+        df.drop(['columnDrop'], axis=1, inplace=True)
+    Estandarizar = StandardScaler()
+    MEstandarizada = Estandarizar.fit_transform(df)
+    session.MEstandarizada = MEstandarizada
+    
+
+    MParticional = KMeans(n_clusters=4, random_state=0).fit(MEstandarizada)
+    MParticional.predict(MEstandarizada)
+    session.MParticional = MParticional
+
+    return render_template('segmentacion.html', nameData=session.fileSelected, csv_list=csv_list)
 
 # Get the uploaded files for segmentacion
 @app.route("/segmentacion", methods=['POST', 'GET'])
@@ -150,7 +217,38 @@ def uploadFilesSegmentacion():
 def soporte_vectorial():
     update_csv_dir()
     session.url = url_for('soporte_vectorial')
-    return render_template('soporte_vectorial.html', csv_list=csv_list)
+    fileName = request.args.get('fileName')
+    x = request.args.getlist('valorX_PR') # Variables Predictoras
+    y = request.args.get('valorY_PR') # Variable a Pronosticas
+    max_d = request.args.get('max_depth') # Profundidad Maxima
+    min_s = request.args.get('min_samples_split') # Minimo de muestras para dividir
+    min_l = request.args.get('min_samples_leaf') # Minimo de muestras por hoja
+
+    df = pd.read_csv(repo+session.fileSelected)
+
+    pronostico = ''
+    dparams = []
+    dictOpciones = {}
+
+    print('Internal: '+str(session.fileSelected))
+    print('External: '+str(fileName))
+
+    if ('X' in session.bosquesRes.keys()):
+        for name in session.bosquesRes['X']:
+            print(name+": "+str(request.args.get(name)))
+            if(request.args.get(name) is not None):
+                dictOpciones[name] = [float(request.args.get(name))]
+                print(dictOpciones[name])
+        pronostico = str(obtener_pronostico(dictOpciones, session.bosquesRes['Pronostico']))
+    
+    if (x is not None and y is not None):
+        print(str(x))
+        #print(y)
+        session.bosquesRes = train(df, x, y, max_d, min_s, min_l, svm=True)
+        if (max_d is not None and min_s is not None and min_l is not None):
+            dparams = [max_d, min_s, min_l]
+
+    return render_template('soporte_vectorial.html', table=df, nameData=session.fileSelected, res=session.svmRes, pronostico=pronostico, csv_list=csv_list, params=dparams, isRegression=session.isRegression)
 
 # Get the uploaded files for soporte vectorial
 @app.route("/soporte_vectorial", methods=['POST', 'GET'])
@@ -160,7 +258,7 @@ def uploadFilesSoporteVectorial():
 # --------- Funcionalidad ------------------
 
 # Entrenar variables
-def train(df, x, y, arbol=True):
+def train(df, x, y, max_d=0, min_s=0, min_l=0,arbol=True, regresion=True, svm=False, kernel='linear'):
     X = np.array(df[x])
     #X = x
     xNames = df[['Pregnancies', 
@@ -178,11 +276,33 @@ def train(df, x, y, arbol=True):
                                                                     random_state = 0, 
                                                                     shuffle = True)
     
-    if(arbol):
-        Pronostico = DecisionTreeRegressor(random_state=0)
-    else:
-        Pronostico = RandomForestRegressor(random_state=0)
-    Pronostico.fit(X_train, Y_train)
+    # Revisa si es arbol bosque o maquina de soporte vectorial, ademas de clasificacion o regresion
+    if(arbol and regresion and not svm): # Arbol - Regresion
+        if(max_d != 0 and min_s != 0 and min_l != 0):
+            Pronostico = DecisionTreeRegressor(max_depth=int(max_d), min_samples_split=int(min_s), min_samples_leaf=int(min_l), random_state=0)
+        else:
+            Pronostico = DecisionTreeRegressor(random_state=0)
+    elif(arbol and not regresion and not svm): # Arbol - Clasificacion
+        if(max_d != 0 and min_s != 0 and min_l != 0):
+            Pronostico = DecisionTreeClassifier(max_depth=int(max_d), min_samples_split=int(min_s), min_samples_leaf=int(min_l), random_state=0)
+        else:
+            Pronostico = DecisionTreeClassifier(random_state=0)
+    elif(not arbol and regresion and not svm): # Bosque - Regresion
+        if(max_d != 0 and min_s != 0 and min_l != 0):
+            Pronostico = RandomForestRegressor(max_depth=int(max_d), min_samples_split=int(min_s), min_samples_leaf=int(min_l), random_state=0)
+        else:
+            Pronostico = RandomForestRegressor(random_state=0)
+    elif(not arbol and not regresion and not svm): # Bosque - Clasificacion
+        if(max_d != 0 and min_s != 0 and min_l != 0):
+            Pronostico = RandomForestClassifier(max_depth=int(max_d), min_samples_split=int(min_s), min_samples_leaf=int(min_l), random_state=0)
+        else:
+            Pronostico = RandomForestClassifier(random_state=0)
+    elif(svm): # Maquina de soporte vectorial
+        Pronostico = SVC(kernel=kernel, random_state=0)
+        
+    Pronostico.fit(X_train, Y_train.ravel())
+
+    #joblib.dump(Pronostico, 'model.pkl')
     Y_Pronostico = Pronostico.predict(X_test)
     Valores = pd.DataFrame(Y_test, Y_Pronostico)
     Score = r2_score(Y_test, Y_Pronostico)
@@ -212,6 +332,9 @@ def uploadFiles():
     # get the uploaded file
     uploaded_file = request.files['file']
     name = uploaded_file.filename
+    isPronostico = request.args.get('isPronostico')
+    if(isPronostico is not None):
+        session.isRegression = isPronostico
     print("fileName: "+str(request.args.get('fileName')))
     if uploaded_file.filename != '':
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], name)
@@ -289,7 +412,7 @@ def hMapGraph(name='melb_data.csv'):
 def varCall():
     return varGraph(request.args.get('data'))
 
-def varGraph(name='Hipoteca.csv'):
+def varGraph(name=session.fileSelected):
     df = pd.read_csv(repo+name)
 
     Estandarizar = StandardScaler()
@@ -305,12 +428,56 @@ def varGraph(name='Hipoteca.csv'):
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     return graphJSON
 
+# Line Plot Elbow Method
+@app.route('/elbow', methods=['POST','GET'])
+def elbowCall():
+    return elbowGraph(request.args.get('data'))
+
+def elbowGraph(name=session.fileSelected):
+    session.fileSelected = name
+    #df = pd.read_csv(repo+name)
+
+    MEstandarizada = session.MEstandarizada
+    df_temp = pd.DataFrame(MEstandarizada)
+
+    SSE = []
+    for i in range(2,10):
+        km = KMeans(n_clusters=i, random_state=0)
+        km.fit(df_temp)
+        SSE.append(km.inertia_)
+
+    k1 = KneeLocator(range(2,10), SSE, curve="convex", direction="decreasing")
+
+    fig = px.line(SSE, x=range(2,10), y=SSE, title='Elbow Method', labels={'x':'Cantidad de Clusters K', 'y':'SSE'})
+    fig.add_vline(x=k1.elbow, line_width=3, line_dash="dash", line_color="red")
+
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return graphJSON
+
+@app.route('/cluster', methods=['POST','GET'])
+def clusterCall():
+    return clusterGraph(request.args.get('data'))
+
+def clusterGraph(name=session.fileSelected):
+    session.fileSelected = name
+    df = pd.read_csv(repo+name)
+    
+    MEstandarizada = session.MEstandarizada
+    MParticional = session.MParticional
+    #MParticional = KMeans(n_clusters=4, random_state=0).fit(MEstandarizada)
+    #MParticional.predict(MEstandarizada)
+    
+    fig = px.scatter_3d(df, x=MEstandarizada[:,0], y=MEstandarizada[:,1], z=MEstandarizada[:,2], color=MParticional.labels_)
+
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return graphJSON
+
 # Scatter Plot 
 @app.route('/scatt', methods=['POST','GET'])
 def scattCall():
     return scattGraph(request.args.get('data'))
 
-def scattGraph(name='Hipoteca.csv'):
+def scattGraph(name=session.fileSelected):
     df = pd.read_csv(repo+name)
 
     fig = px.scatter_matrix(df, color=df.columns[-1])
@@ -323,7 +490,7 @@ def scattGraph(name='Hipoteca.csv'):
 def scattCall2():
     return scattGraph2(request.args.get('data'), request.args.get('valorX'), request.args.get('valorY'), request.args.get('color'))
 
-def scattGraph2(name=session.fileSelected, x = 'gastos_comunes', y='vivienda', color='ingresos'):
+def scattGraph2(name=session.fileSelected, x = session.pd.columns[0], y=session.pd.columns[1], color=session.pd.columns[-1]):
     df = pd.read_csv(repo+name)
 
     #print(str(x)+str(y)+str(color))
@@ -343,6 +510,40 @@ def scatterTest():
     color = request.args.get('color')
 
     print(str(x)+str(y)+str(color))
+
+"""
+@app.route('/tree', methods=['POST','GET'])
+def crearArbol(name=session.fileSelected):
+    # 2YYuezJtkaidcZoh5wbk
+    # ipython -c "import plotly; plotly.tools.set_credentials_file(username='PieterVDW', api_key='2YYuezJtkaidcZoh5wbk')"
+    session.arbolesRes['']
+    df = pd.read_csv(repo+name)
+    fig = px.treemap(session.arbolesRes['Pronostico'], )
+
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return graphJSON
+"""
+
+@app.route('/tree.png')
+def tree_png():
+    #plt.figure()
+    #plot_tree(session.arbolesRes['Pronostico'], feature_names=session.arbolesRes['X'])
+    #plt.savefig('tree.eps', format='eps',bbox_inches="tight")
+
+    fig = plt.figure(figsize=(20,20)) #Figure()
+    plot_tree(session.arbolesRes['Pronostico'], feature_names=session.arbolesRes['X'])
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
+
+@app.route('/forest.png')
+def forest_png():
+    fig = plt.figure(figsize=(20,20)) #Figure()
+    Estimador = session.bosquesRes['Pronostico'].estimators_[99]
+    plot_tree(Estimador, feature_names=session.bosquesRes['X'])
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
 
 # ------ Para tablas -------------------------------------------------
 
@@ -394,6 +595,27 @@ def carComp():
 
     return jsonify(#number_elements=a * b,
                    my_table=json.loads(df.to_json(orient="split"))["data"],
+                   columns=[{"title": str(col)} for col in json.loads(df.to_json(orient="split"))["columns"]])
+
+# Tabla para Obtencion de Centroides
+@app.route('/carCentroides')
+def carCentroides():
+    fileName = request.args.get('fileName')
+    columnDrop = request.args.get('drop')
+
+    df = pd.read_csv(repo+session.fileSelected)
+
+    MEstandarizada = session.MEstandarizada 
+
+    #MParticional = KMeans(n_clusters=4, random_state=0).fit(MEstandarizada)
+    #MParticional.predict(MEstandarizada)
+
+    MParticional = session.MParticional
+    
+    df['clusterP'] = MParticional.labels_
+    df = df.groupby('clusterP').mean()
+
+    return jsonify(my_table=json.loads(df.to_json(orient="split"))["data"],
                    columns=[{"title": str(col)} for col in json.loads(df.to_json(orient="split"))["columns"]])
 
 # Tabla para mostrar variables Arboles

@@ -355,11 +355,10 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <h6>Carga o Selecciona Archivo</h6>
+                                    <h5>Actualizar Datos</h5>
+                                    Carga o Selecciona Archivo
                                     <form method="POST" action="" enctype="multipart/form-data">
                                         <p><input type="file" name="file" accept=".csv"></p>
-                                        <p>Actualizar Datos</p>
-                                        <p><input type="submit" value="Submit"></p>
                                         <!--input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), changeText(this.value)"-->  
                                         <select class="custom-select" name="fileName" id="fileName" onchange="pca(this.value), hmCall(this.value), changeText(this.value), arboles(this.value)">
                                             {% for archivo in csv_list %}
@@ -371,12 +370,8 @@
                                             {% endfor %}
                                         </select>
                                         <p></p>
-                                        <button type="button" class="btn btn-primary btn-lg btn-block" href="javascript:void();" id="calculate">Mostrar Datos</button>
-                                        <p></p>
-                                        <select class="custom-select">
-                                            <option value="pronostico">Pronóstico</option>
-                                            <option value="clasificacion">Clasificación</option>
-                                        </select>
+                                        <p><input type="submit" class="btn btn-primary btn-lg btn-block" value="Submit"></p>
+                                        <button type="button" class="btn btn-secondary btn-lg btn-block" href="javascript:void();" id="calculate">Mostrar Datos</button>
                                     </form>
                                     
                                     
@@ -404,9 +399,9 @@
                                     <script type="text/javascript">
                                     $(document).ready(function() {
                                         var table = null;
-                                        $('a#calculate').bind('click', function() {
+                                        $('#calculate').bind('click', function() {
                                         $.getJSON('/corr', {
-                                            fileName: $('input[name="fileName"]').val()
+                                            fileName: document.getElementById("fileName").value
                                         }, function(data) {
                                             $("#elements").text(data.number_elements);
                                             if (table !== null) {
@@ -499,9 +494,9 @@
                                     <script type="text/javascript">
                                     $(document).ready(function() {
                                         var table = null;
-                                        $('a#calculate').bind('click', function() {
+                                        $('#calculate').bind('click', function() {
                                         $.getJSON('/carComp', {
-                                            fileName: $('input[name="fileName"]').val()
+                                            fileName: document.getElementById("fileName").value
                                         }, function(data) {
                                             $("#elements").text(data.number_elements);
                                             if (table !== null) {

@@ -11,6 +11,13 @@
 
     <title>Data Pick - Soporte Vectorial</title>
 
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.css" />
+    <link rel="stylesheet" href="Treant.css" type="text/css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
+
     <!-- Custom fonts for this template-->
     <link href="{{url_for('static', filename='vendor/fontawesome-free/css/all.min.css')}}" rel="stylesheet" type="text/css">
     <link
@@ -24,6 +31,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
     <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
+    
     <script>
         function cb(selection) {
             $.getJSON({
@@ -49,6 +57,16 @@
             $.getJSON({
                 url: "/hMap", data: { 'data': selection }, success: function (result) {
                     Plotly.react('heatMap', result, {});;
+                }
+            });
+        }
+    </script>
+
+    <script>
+        function scattCall2(selection, xData, yData, colorData) {
+            $.getJSON({
+                url: "/scattSmall", data: { 'data': selection, 'valorX': xData, 'valorY': yData, 'color': colorData}, success: function (result) {
+                    Plotly.react('scatterSmall', result, {});;
                 }
             });
         }
@@ -310,11 +328,10 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <h6>Carga o Selecciona Archivo</h6>
+                                    <h5>Actualizar Datos</h5>
+                                    Carga o Selecciona Archivo
                                     <form method="POST" action="" enctype="multipart/form-data">
                                         <p><input type="file" name="file" accept=".csv"></p>
-                                        <p>Actualizar Datos</p>
-                                        <p><input type="submit" value="Submit"></p>
                                         <!--input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), changeText(this.value)"-->  
                                         <select class="custom-select" name="fileName" id="fileName" onchange="pca(this.value), hmCall(this.value), changeText(this.value), arboles(this.value)">
                                             {% for archivo in csv_list %}
@@ -326,12 +343,8 @@
                                             {% endfor %}
                                         </select>
                                         <p></p>
-                                        <button type="button" class="btn btn-primary btn-lg btn-block" href="javascript:void();" id="calculate">Mostrar Datos</button>
-                                        <p></p>
-                                        <select class="custom-select">
-                                            <option value="pronostico">Pronóstico</option>
-                                            <option value="clasificacion">Clasificación</option>
-                                        </select>
+                                        <p><input type="submit" class="btn btn-primary btn-lg btn-block" value="Submit"></p>
+                                        <button type="button" class="btn btn-secondary btn-lg btn-block" href="javascript:void();" id="calculate">Mostrar Datos</button>
                                     </form>
                                     
                                     
@@ -339,7 +352,233 @@
                             </div>
                         </div>
 
+                        <!-- Small Scatter Plot -->
+                        <div class="col-xl-12 col-lg-8">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Gráfico de Dispersión</h6>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body" name="ddScatt" id="ddScatt" onchange="scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value)">                               
+                                    Establecer Eje X
+                                    <select class="custom-select" name = "valorX" id = "valorX" >
+                                        {% for column in table %}
+                                            <option value="{{column}}" onchange="">{{ column }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    Establecer Eje Y
+                                    <select class="custom-select" name = "valorY" id="valorY">
+                                        {% for column in table %}
+                                            <option value="{{column}}" onchange="">{{ column }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    Establecer Color del gráfico
+                                    <select class="custom-select" name = "color" id="color">
+                                        {% for column in table %}
+                                            <option value="{{column}}" onchange="">{{ column }}</option>
+                                        {% endfor %}
+                                    </select>
+
+                                    <div id="scatterSmall" class="scatterSmall"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Seleccion -->
+                        <div class="col-xl-9 col-lg-8" style="width: 100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Selección de Parámetros</h6>
+                                    <div class="dropdown no-arrow">
+                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                                            aria-labelledby="dropdownMenuLink">
+                                            <div class="dropdown-header">Dropdown Header:</div>
+                                            <a class="dropdown-item" href="#">Action</a>
+                                            <a class="dropdown-item" href="#">Another action</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="#">Something else here</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <div class="container-fluid">
+                                        Selección de Variables Predictoras
+                                        <form id="multiple_select_form">
+                                            <select class="selectpicker" multiple name = "valorX_PR" id = "valorX_PR">
+                                                {% for column in table %}
+                                                    {% if column in res['X'] %}
+                                                        <option value="{{column}}" onchange="" selected>{{ column }}</option>
+                                                    {% else %}
+                                                        <option value="{{column}}" onchange="" >{{ column }}</option>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </select>
+    
+                                            <!--button id="submitAB">Calcular</button-->
+    
+                                            <!--select multiple id="valorX" name="valorX">       
+                                                <option value="1">this</option>       
+                                                <option value="2">that</option>       
+                                                <option value="3">other thing</option>
+                                            </select-->
+                                            <p></p>
+    
+                                            <div class="form-inline">
+                                                Selección de Variable a Pronosticar 
+                                                <select class="custom-select" name = "valorY_PR" id = "valorY_PR">
+                                                    {% for column in table %}
+                                                        <option value="{{column}}" onchange="">{{ column }}</option>
+                                                    {% endfor %}
+                                                </select>
+    
+                                            </div>
+                                            <p><input type="submit" class="btn btn-light" value="Calcular"></p>
+                                            <p><input type="hidden" value="hidden_valorX" id="hidden_valorX"></p>
+
+                                            {% if res['Score'] %}
+                                            <h4>Modificar Parámetros del Árbol</h4> 
+                                            <div class="form-group row">
+                                                <label for="max_depth" class="col-sm-5 col-form-label">Profundidad Máxima</label>
+                                                <div class="col-sm-4">
+                                                    <input type="text" class="form-control" name="max_depth" id="max_depth" placeholder="Ejemplo: 10" value="{{params[0]}}">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label for="min_samples_split" class="col-sm-5 col-form-label">Minimo de muestras para dividir</label>
+                                                <div class="col-sm-4">
+                                                    <input type="text" class="form-control" name="min_samples_split" id="min_samples_split" placeholder="Ejemplo: 4" value="{{params[1]}}">
+                                                </div>
+                                            </div>
+                                            <div class="form-group row">
+                                                <label for="min_samples_leaf" class="col-sm-5 col-form-label">Mínimo de muestras por hoja</label>
+                                                <div class="col-sm-4">
+                                                    <input type="text" class="form-control" name="min_samples_leaf" id="min_samples_leaf" placeholder="Ejemplo: 2" value="{{params[2]}}">
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        </form>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if res['Score'] %}
+                        <!-- Realizar Prediccion -->
+                        <div class="col-xl-3 col-lg-2" style="width: 100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <h3>Score</h3>
+                                    <h6>{{res['Score']}}</h6>
+                                </div>
+                            </div>
+                            
+                        </div>
+
+                        <!-- Mostrar Arbol -->
+                        <div class="" style="width: 100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Árbol</h6>
+                                    <div class="dropdown no-arrow">
+                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                                            aria-labelledby="dropdownMenuLink">
+                                            <div class="dropdown-header">Dropdown Header:</div>
+                                            <a class="dropdown-item" href="#">Action</a>
+                                            <a class="dropdown-item" href="#">Another action</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="#">Something else here</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <div id="treePlot" class="treePlot">
+                                        <img src="/tree.png" class="img-fluid" alt="my plot">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         
+                        <!-- Nuevos Pronósticos -->
+                        <div class="col-xl-7 col-lg-5" style="width:100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Nuevos Pronósticos</h6>
+                                    <div class="dropdown no-arrow">
+                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                                            </a>
+                                            <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                                            aria-labelledby="dropdownMenuLink">
+                                            <div class="dropdown-header">Dropdown Header:</div>
+                                            <a class="dropdown-item" href="#">Action</a>
+                                            <a class="dropdown-item" href="#">Another action</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="#">Something else here</a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Card Body -->
+                                <div class="card-body text-right">
+                                    <form class="form" >
+                                        <!-- TODO agregar JINJA para que sea de acuerdo a los parámetros -->
+                                        {% for column in res['X'] %}
+                                        <div class="form-group row">
+                                            <label for="{{column}}" class="col-sm-5 col-form-label">{{column}}</label>
+                                            <div class="col-sm-4">
+                                                <input type="text" class="form-control" name="{{column}}" id="{{column}}" placeholder="Inserte contenido">
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        <div class="form-group row align-items-right">
+                                            <input type="submit" class="btn btn-light" value="Obtener">
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if pronostico %}
+                        <!-- Realizar Prediccion -->
+                        <div class="col-xl-3 col-lg-2" style="width: 100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <h3>Pronóstico</h3>
+                                    <h6>{{pronostico}}</h6>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        {% endif %}
+                        
+                        {% endif %}
+
 
                     </div>
                 </div>

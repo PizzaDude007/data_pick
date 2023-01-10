@@ -24,35 +24,26 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
     <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
+    
     <script>
-        function cb(selection) {
+        function elbowCall(selection) {
             $.getJSON({
-                url: "/callback", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('chart', result, {});;
+                url: "/elbow", data: { 'data': selection }, success: function (result) {
+                    Plotly.react('elbowChart', result, {});;
                 }
             });
         }
     </script>
 
-    <script>
-        function histCall(selection) {
-            $.getJSON({
-                url: "/hist", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('histChart', result, {});;
-                }
-            });
-        }
-    </script>
-
-    <script>
-        function hmCall(selection) {
-            $.getJSON({
-                url: "/hMap", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('heatMap', result, {});;
-                }
-            });
-        }
-    </script>
+<script>
+    function clusterCall(selection, column) {
+        $.getJSON({
+            url: "/cluster", data: { 'data': selection }, success: function (result) {
+                Plotly.react('clusterChart', result, {});;
+            }
+        });
+    }
+</script>
 
 </head>
 
@@ -287,7 +278,7 @@
                         </div>
 
                         <!-- Table -->
-                        <div class="col-xl-3 col-lg-2">
+                        <div class="col-xl-3 col-lg-9">
                             <div class="card shadow mb-4">
                                 <!-- Card Header - Dropdown -->
                                 <div
@@ -310,13 +301,12 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <h6>Carga o Selecciona Archivo</h6>
+                                    <h5>Actualizar Datos</h5>
+                                    Carga o Selecciona Archivo
                                     <form method="POST" action="" enctype="multipart/form-data">
                                         <p><input type="file" name="file" accept=".csv"></p>
-                                        <p>Actualizar Datos</p>
-                                        <p><input type="submit" value="Submit"></p>
                                         <!--input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), changeText(this.value)"-->  
-                                        <select class="custom-select" name="fileName" id="fileName" onchange="pca(this.value), hmCall(this.value), changeText(this.value), arboles(this.value)">
+                                        <select class="custom-select" name="fileName" id="fileName" onchange="elbowCall(selection=this), clusterCall(selection=this)">
                                             {% for archivo in csv_list %}
                                                 {% if archivo == nameData %}
                                                     <option class="dropdown-item" name="{{archivo}}" id="{{archivo}}" selected>{{archivo}}</a>
@@ -326,12 +316,8 @@
                                             {% endfor %}
                                         </select>
                                         <p></p>
-                                        <button type="button" class="btn btn-primary btn-lg btn-block" href="javascript:void();" id="calculate">Mostrar Datos</button>
-                                        <p></p>
-                                        <select class="custom-select">
-                                            <option value="pronostico">Pronóstico</option>
-                                            <option value="clasificacion">Clasificación</option>
-                                        </select>
+                                        <p><input type="submit" class="btn btn-primary btn-lg btn-block" value="Submit"></p>
+                                        <button type="button" class="btn btn-secondary btn-lg btn-block" href="javascript:void();" id="calculate">Mostrar Datos</button>
                                     </form>
                                     
                                     
@@ -339,7 +325,86 @@
                             </div>
                         </div>
 
-                        
+                        <!-- Elbow Method -->
+                        <div class="col-xl-5 col-lg-9">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Método de Codo</h6>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <div id="elbowChart" class="elbowChart"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Centroides -->
+                        <div class="col-xl-7 col-lg-5">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Centroides</h6>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    
+                                    <!--d class="button" href="javascript:void();" id="calculate">Mostrar Tabla</d-->
+
+                                    <table id="carCentroides">Aquí va una tabla</table>
+
+                                    <script src="https://code.jquery.com/jquery-1.12.4.js" type="text/javascript"></script>
+                                    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js" type="text/javascript"></script>
+                                    <script type="text/javascript">
+                                    $(document).ready(function() {
+                                        var table = null;
+                                        $('#calculate').bind('click', function() {
+                                        $.getJSON('/carCentroides', {
+                                            fileName: document.getElementById("fileName").value,
+                                            //columnDrop: document.getElementById("drop").value
+                                        }, function(data) {
+                                            $("#elements").text(data.number_elements);
+                                            if (table !== null) {
+                                            table.destroy();
+                                            table = null;
+                                            $("#carCentroides").empty();
+                                            }
+                                            table = $("#carCentroides").DataTable({
+                                            data: data.my_table,
+                                            columns: data.columns,
+                                            autoWidth: true,
+                                            responsive: true,
+                                            scrollY:        400,
+                                            deferRender:    true,
+                                            scroller: true,
+                                            rows: true,
+                                            });
+                                        });
+                                        return false;
+                                        });
+                                    });
+                                    </script>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Grafica de Centroides -->
+                        <div class="col-xl-12 col-lg-8" style="width: 100%">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Gráfica de Clusters</h6>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <div id="clusterChart" class="clusterChart"></div>
+                                </div>
+                            </div>
+                        </div>
 
                     </div>
                 </div>
@@ -394,9 +459,13 @@
         histCall("melb_data.csv");
     </script>
 
-<script>
-    hmCall("melb_data.csv");
-</script>
+    <script>
+        elbowCall("Hipoteca.csv");
+    </script>
+
+    <script>
+        clusterCall("Hipoteca.csv");
+    </script>
 
     <!-- Flask -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
