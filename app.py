@@ -573,6 +573,7 @@ def forest_png():
     return Response(output.getvalue(), mimetype='image/png')
 
 # No se ocupa
+"""
 @app.route('/svm.png')
 def svm_png():
     fig, ax = plt.subplots()
@@ -609,6 +610,7 @@ def svm_png():
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')
+"""
 
 # ------ Para tablas -------------------------------------------------
 
