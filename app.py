@@ -160,7 +160,10 @@ def arboles():
             if(request.args.get(name) is not None):
                 dictOpciones[name] = [float(request.args.get(name))]
                 print(dictOpciones[name])
-        pronostico = str(obtener_pronostico(dictOpciones, session.arbolesRes['Pronostico']))
+        try:
+            pronostico = str(obtener_pronostico(dictOpciones, session.arbolesRes['Pronostico']))
+        except:
+            print('Error en pronostico')
         #dfPronostico = pd.DataFrame.from_dict(dictOpciones)
         #pronostico = str(session.arbolesRes['Pronostico'].predict(dfPronostico))
 
@@ -207,7 +210,10 @@ def bosques():
             if(request.args.get(name) is not None):
                 dictOpciones[name] = [float(request.args.get(name))]
                 print(dictOpciones[name])
-        pronostico = str(obtener_pronostico(dictOpciones, session.bosquesRes['Pronostico']))
+        try:
+            pronostico = str(obtener_pronostico(dictOpciones, session.bosquesRes['Pronostico']))
+        except:
+            print('Error en pronostico')
     
     
     return render_template('bosques.html', table=df, nameData=session.fileSelected, res=session.bosquesRes, pronostico=pronostico, csv_list=csv_list, params=dparams, isRegression=session.isRegression)
@@ -281,7 +287,10 @@ def soporte_vectorial():
             if(request.args.get(name) is not None):
                 dictOpciones[name] = [float(request.args.get(name))]
                 print(dictOpciones[name])
-        pronostico = str(obtener_pronostico(dictOpciones, session.svmRes['Pronostico']))
+        try:
+            pronostico = str(obtener_pronostico(dictOpciones, session.svmRes['Pronostico']))
+        except:
+            print('Error en pronostico')
 
 
     return render_template('soporte_vectorial.html', table=df, nameData=session.fileSelected, res=session.svmRes, pronostico=pronostico, csv_list=csv_list, params=dparams, isRegression=session.isRegression)
@@ -346,13 +355,8 @@ def train(df, x, y, max_d=0, min_s=0, min_l=0,arbol=True, regresion=True, svm=Fa
     return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score, 'X':x, 'Y':y, 'roc':roc, 'X_test':X_test, 'Y_test':Y_test, 'kernel':kernel}
 
 def obtener_pronostico(values, Pronostico):
-    pronostico = ''
-    try:
-        df = pd.DataFrame(values)
-        Pronostico.predict(df)[0]
-    except:
-        print('Error al obtener el pronostico')
-    return pronostico
+    df = pd.DataFrame(values)
+    return Pronostico.predict(df)[0]
 
 @app.route("/ajax_parametros",methods=["POST","GET"])
 def ajax_add():
