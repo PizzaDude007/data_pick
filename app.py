@@ -147,7 +147,10 @@ def arboles():
     if (x is not None and y is not None):
         print(str(x))
         #print(y)
-        session.arbolesRes = train(df, x, y, max_d, min_s, min_l, True, session.isRegression)
+        try:
+            session.arbolesRes = train(df, x, y, max_d, min_s, min_l, True, session.isRegression)
+        except:
+            print('Error en craga de arboles')
         if (max_d is not None and min_s is not None and min_l is not None):
             dparams = [max_d, min_s, min_l]
     elif ('X' in session.arbolesRes.keys() and session.firstPass):
@@ -191,7 +194,10 @@ def bosques():
     if (x is not None and y is not None):
         print(str(x))
         #print(y)
-        session.bosquesRes = train(df, x, y, max_d, min_s, min_l, False, session.isRegression)
+        try:
+            session.bosquesRes = train(df, x, y, max_d, min_s, min_l, False, session.isRegression)
+        except:
+            print('Error en carga de bosques')
         if (max_d is not None and min_s is not None and min_l is not None):
             dparams = [max_d, min_s, min_l]
     elif ('X' in session.bosquesRes.keys()):
@@ -262,7 +268,10 @@ def soporte_vectorial():
     if (x is not None and y is not None):
         print(str(x))
         #print(y)
-        session.svmRes = train(df, x, y, max_d, min_s, min_l, svm=True, kernel=kernel)
+        try:
+            session.svmRes = train(df, x, y, max_d, min_s, min_l, svm=True, kernel=kernel)
+        except:
+            print('Error en carga de SVM')
         if (max_d is not None and min_s is not None and min_l is not None):
             dparams = [max_d, min_s, min_l]
     elif ('X' in session.svmRes.keys()): #and x[0] in session.svmRes['X'] and kernel == session.svmRes['kernel'] and y == session.svmRes['Y']):
