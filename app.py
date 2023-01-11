@@ -61,6 +61,7 @@ class session:
     MEstandarizada = None
     MParticional = None
     pd = pd.read_csv(repo+fileSelected)
+    firstPass = True
 
 class svm_multiple:
     linear = {}
@@ -127,8 +128,15 @@ def arboles():
 
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
-
-    if ('X' in session.arbolesRes.keys() and x[0] in session.arbolesRes['X'] and y == session.arbolesRes['Y']):
+    
+    if (x is not None and y is not None):
+        print(str(x))
+        #print(y)
+        session.arbolesRes = train(df, x, y, max_d, min_s, min_l, True, session.isRegression)
+        if (max_d is not None and min_s is not None and min_l is not None):
+            dparams = [max_d, min_s, min_l]
+    elif ('X' in session.arbolesRes.keys() and session.firstPass):
+        #if (x is None or (x is not None and x[0] in session.arbolesRes['X'] and y == session.arbolesRes['Y'])):
         for name in session.arbolesRes['X']:
             print(name+": "+str(request.args.get(name)))
             if(request.args.get(name) is not None):
@@ -138,12 +146,6 @@ def arboles():
         #dfPronostico = pd.DataFrame.from_dict(dictOpciones)
         #pronostico = str(session.arbolesRes['Pronostico'].predict(dfPronostico))
 
-    if (x is not None and y is not None):
-        print(str(x))
-        #print(y)
-        session.arbolesRes = train(df, x, y, max_d, min_s, min_l, True, session.isRegression)
-        if (max_d is not None and min_s is not None and min_l is not None):
-            dparams = [max_d, min_s, min_l]
     
     return render_template('arboles.html', table=df, nameData=session.fileSelected, res=session.arbolesRes, pronostico=pronostico, csv_list=csv_list, params=dparams, isRegression=session.isRegression)
 
@@ -171,7 +173,14 @@ def bosques():
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
 
-    if ('X' in session.bosquesRes.keys() and x[0] in session.bosquesRes['X'] and y == session.bosquesRes['Y']):
+    if (x is not None and y is not None):
+        print(str(x))
+        #print(y)
+        session.bosquesRes = train(df, x, y, max_d, min_s, min_l, False, session.isRegression)
+        if (max_d is not None and min_s is not None and min_l is not None):
+            dparams = [max_d, min_s, min_l]
+    elif ('X' in session.bosquesRes.keys()):
+        #if (x is None or (x is not None and x[0] in session.bosquesRes['X'] and y == session.bosquesRes['Y'])):
         for name in session.bosquesRes['X']:
             print(name+": "+str(request.args.get(name)))
             if(request.args.get(name) is not None):
@@ -179,12 +188,6 @@ def bosques():
                 print(dictOpciones[name])
         pronostico = str(obtener_pronostico(dictOpciones, session.bosquesRes['Pronostico']))
     
-    if (x is not None and y is not None):
-        print(str(x))
-        #print(y)
-        session.bosquesRes = train(df, x, y, max_d, min_s, min_l, False, session.isRegression)
-        if (max_d is not None and min_s is not None and min_l is not None):
-            dparams = [max_d, min_s, min_l]
     
     return render_template('bosques.html', table=df, nameData=session.fileSelected, res=session.bosquesRes, pronostico=pronostico, csv_list=csv_list, params=dparams, isRegression=session.isRegression)
 
@@ -241,20 +244,21 @@ def soporte_vectorial():
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
 
-    if ('X' in session.svmRes.keys() and x[0] in session.svmRes['X'] and kernel == session.svmRes['kernel'] and y == session.svmRes['Y']):
-        for name in session.svmRes['X']:
-            print(name+": "+str(request.args.get(name)))
-            if(request.args.get(name) is not None):
-                dictOpciones[name] = [float(request.args.get(name))]
-                print(dictOpciones[name])
-        pronostico = str(obtener_pronostico(dictOpciones, session.svmRes['Pronostico']))
-    
     if (x is not None and y is not None):
         print(str(x))
         #print(y)
         session.svmRes = train(df, x, y, max_d, min_s, min_l, svm=True, kernel=kernel)
         if (max_d is not None and min_s is not None and min_l is not None):
             dparams = [max_d, min_s, min_l]
+    elif ('X' in session.svmRes.keys()): #and x[0] in session.svmRes['X'] and kernel == session.svmRes['kernel'] and y == session.svmRes['Y']):
+        #if(x is None or (x is not None and x[0] in session.svmRes['X'] and kernel == session.svmRes['kernel'] and y == session.svmRes['Y'])):
+        for name in session.svmRes['X']:
+            print(name+": "+str(request.args.get(name)))
+            if(request.args.get(name) is not None):
+                dictOpciones[name] = [float(request.args.get(name))]
+                print(dictOpciones[name])
+        pronostico = str(obtener_pronostico(dictOpciones, session.svmRes['Pronostico']))
+
 
     return render_template('soporte_vectorial.html', table=df, nameData=session.fileSelected, res=session.svmRes, pronostico=pronostico, csv_list=csv_list, params=dparams, isRegression=session.isRegression)
 
