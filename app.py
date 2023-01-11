@@ -346,8 +346,13 @@ def train(df, x, y, max_d=0, min_s=0, min_l=0,arbol=True, regresion=True, svm=Fa
     return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score, 'X':x, 'Y':y, 'roc':roc, 'X_test':X_test, 'Y_test':Y_test, 'kernel':kernel}
 
 def obtener_pronostico(values, Pronostico):
-    df = pd.DataFrame(values)
-    return Pronostico.predict(df)[0]
+    pronostico = ''
+    try:
+        df = pd.DataFrame(values)
+        Pronostico.predict(df)[0]
+    except:
+        print('Error al obtener el pronostico')
+    return pronostico
 
 @app.route("/ajax_parametros",methods=["POST","GET"])
 def ajax_add():
