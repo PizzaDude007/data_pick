@@ -22,7 +22,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn import model_selection
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, plot_tree
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, pairwise_distances_argmin_min, classification_report, confusion_matrix, accuracy_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, pairwise_distances_argmin_min, classification_report, confusion_matrix, accuracy_score, RocCurveDisplay, roc_curve, auc
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.cluster import KMeans
 
@@ -61,6 +61,13 @@ class session:
     MEstandarizada = None
     MParticional = None
     pd = pd.read_csv(repo+fileSelected)
+
+class svm_multiple:
+    linear = {}
+    poly = {}
+    rbf = {}
+    sigmoid = {}
+    empty = True
 
 # -------- PAGINAS ---------------------------------------------------
 
@@ -121,7 +128,7 @@ def arboles():
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
 
-    if ('X' in session.arbolesRes.keys()):
+    if ('X' in session.arbolesRes.keys() and x[0] in session.arbolesRes['X'] and y == session.arbolesRes['Y']):
         for name in session.arbolesRes['X']:
             print(name+": "+str(request.args.get(name)))
             if(request.args.get(name) is not None):
@@ -164,7 +171,7 @@ def bosques():
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
 
-    if ('X' in session.bosquesRes.keys()):
+    if ('X' in session.bosquesRes.keys() and x[0] in session.bosquesRes['X'] and y == session.bosquesRes['Y']):
         for name in session.bosquesRes['X']:
             print(name+": "+str(request.args.get(name)))
             if(request.args.get(name) is not None):
@@ -220,6 +227,7 @@ def soporte_vectorial():
     fileName = request.args.get('fileName')
     x = request.args.getlist('valorX_PR') # Variables Predictoras
     y = request.args.get('valorY_PR') # Variable a Pronosticas
+    kernel = request.args.get('kernel') # Kernel
     max_d = request.args.get('max_depth') # Profundidad Maxima
     min_s = request.args.get('min_samples_split') # Minimo de muestras para dividir
     min_l = request.args.get('min_samples_leaf') # Minimo de muestras por hoja
@@ -233,18 +241,18 @@ def soporte_vectorial():
     print('Internal: '+str(session.fileSelected))
     print('External: '+str(fileName))
 
-    if ('X' in session.bosquesRes.keys()):
-        for name in session.bosquesRes['X']:
+    if ('X' in session.svmRes.keys() and x[0] in session.svmRes['X'] and kernel == session.svmRes['kernel'] and y == session.svmRes['Y']):
+        for name in session.svmRes['X']:
             print(name+": "+str(request.args.get(name)))
             if(request.args.get(name) is not None):
                 dictOpciones[name] = [float(request.args.get(name))]
                 print(dictOpciones[name])
-        pronostico = str(obtener_pronostico(dictOpciones, session.bosquesRes['Pronostico']))
+        pronostico = str(obtener_pronostico(dictOpciones, session.svmRes['Pronostico']))
     
     if (x is not None and y is not None):
         print(str(x))
         #print(y)
-        session.bosquesRes = train(df, x, y, max_d, min_s, min_l, svm=True)
+        session.svmRes = train(df, x, y, max_d, min_s, min_l, svm=True, kernel=kernel)
         if (max_d is not None and min_s is not None and min_l is not None):
             dparams = [max_d, min_s, min_l]
 
@@ -261,14 +269,6 @@ def uploadFilesSoporteVectorial():
 def train(df, x, y, max_d=0, min_s=0, min_l=0,arbol=True, regresion=True, svm=False, kernel='linear'):
     X = np.array(df[x])
     #X = x
-    xNames = df[['Pregnancies', 
-                       'Glucose', 
-                       'BloodPressure', 
-                       'SkinThickness', 
-                       'Insulin', 
-                       'BMI',
-                       'DiabetesPedigreeFunction',
-                       'Age']]
     #X = np.array(xNames)
     Y = np.array(df[[y]])
     X_train, X_test, Y_train, Y_test = model_selection.train_test_split(X, Y, 
@@ -278,26 +278,27 @@ def train(df, x, y, max_d=0, min_s=0, min_l=0,arbol=True, regresion=True, svm=Fa
     
     # Revisa si es arbol bosque o maquina de soporte vectorial, ademas de clasificacion o regresion
     if(arbol and regresion and not svm): # Arbol - Regresion
-        if(max_d != 0 and min_s != 0 and min_l != 0):
+        if(max_d is not None and min_s is not None and min_l is not None):
             Pronostico = DecisionTreeRegressor(max_depth=int(max_d), min_samples_split=int(min_s), min_samples_leaf=int(min_l), random_state=0)
         else:
             Pronostico = DecisionTreeRegressor(random_state=0)
     elif(arbol and not regresion and not svm): # Arbol - Clasificacion
-        if(max_d != 0 and min_s != 0 and min_l != 0):
+        if(max_d is not None and min_s is not None and min_l is not None):
             Pronostico = DecisionTreeClassifier(max_depth=int(max_d), min_samples_split=int(min_s), min_samples_leaf=int(min_l), random_state=0)
         else:
             Pronostico = DecisionTreeClassifier(random_state=0)
     elif(not arbol and regresion and not svm): # Bosque - Regresion
-        if(max_d != 0 and min_s != 0 and min_l != 0):
+        if(max_d is not None and min_s is not None and min_l is not None):
             Pronostico = RandomForestRegressor(max_depth=int(max_d), min_samples_split=int(min_s), min_samples_leaf=int(min_l), random_state=0)
         else:
             Pronostico = RandomForestRegressor(random_state=0)
     elif(not arbol and not regresion and not svm): # Bosque - Clasificacion
-        if(max_d != 0 and min_s != 0 and min_l != 0):
+        if(max_d is not None and min_s is not None and min_l is not None):
             Pronostico = RandomForestClassifier(max_depth=int(max_d), min_samples_split=int(min_s), min_samples_leaf=int(min_l), random_state=0)
         else:
             Pronostico = RandomForestClassifier(random_state=0)
     elif(svm): # Maquina de soporte vectorial
+        #Pronostico = SVC(kernel=kernel, random_state=0, probability=True)
         Pronostico = SVC(kernel=kernel, random_state=0)
         
     Pronostico.fit(X_train, Y_train.ravel())
@@ -305,9 +306,16 @@ def train(df, x, y, max_d=0, min_s=0, min_l=0,arbol=True, regresion=True, svm=Fa
     #joblib.dump(Pronostico, 'model.pkl')
     Y_Pronostico = Pronostico.predict(X_test)
     Valores = pd.DataFrame(Y_test, Y_Pronostico)
-    Score = r2_score(Y_test, Y_Pronostico)
+    roc = None
+    if svm:
+        Score = accuracy_score(Y_test, Y_Pronostico)
+        #roc = roc_curve(Y_test, Pronostico.predict_proba(X_test)[:,1], pos_label=1)
+        roc = roc_curve(Y_test, Y_Pronostico, pos_label=1)
+    else:
+        Score = r2_score(Y_test, Y_Pronostico)
+    
 
-    return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score, 'X':x}
+    return {'Pronostico':Pronostico,'Y_Pronostico':Y_Pronostico,'Valores':Valores,'Score':Score, 'X':x, 'Y':y, 'roc':roc, 'X_test':X_test, 'Y_test':Y_test, 'kernel':kernel}
 
 def obtener_pronostico(values, Pronostico):
     df = pd.DataFrame(values)
@@ -454,6 +462,25 @@ def elbowGraph(name=session.fileSelected):
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     return graphJSON
 
+# ROC 
+@app.route('/roc', methods=['POST','GET'])
+def rocCall():
+    return rocGraph(request.args.get('data'))
+
+def rocGraph(name=session.fileSelected):
+    session.fileSelected = name
+    #df = pd.read_csv(repo+name)
+    
+    fpr, tpr, thresholds = session.svmRes['roc']
+    roc_auc = auc(fpr, tpr)
+    print('ROC: '+str(roc_auc))
+
+    fig = px.area(x=fpr, y=tpr, title=f'Curva ROC (AUC={roc_auc:.4f})',labels={'x':'FPR', 'y':'TPR'})
+    fig.add_shape(type="line", line_dash="dash", x0=0, x1=1, y0=0, y1=1)
+
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return graphJSON
+
 @app.route('/cluster', methods=['POST','GET'])
 def clusterCall():
     return clusterGraph(request.args.get('data'))
@@ -541,6 +568,44 @@ def forest_png():
     fig = plt.figure(figsize=(20,20)) #Figure()
     Estimador = session.bosquesRes['Pronostico'].estimators_[99]
     plot_tree(Estimador, feature_names=session.bosquesRes['X'])
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
+
+# No se ocupa
+@app.route('/svm.png')
+def svm_png():
+    fig, ax = plt.subplots()
+
+    if(svm_multiple.empty):
+        df = pd.read_csv(repo+session.fileSelected)
+        x = session.svmRes['X']
+        y = session.svmRes['Y']
+        svm_multiple.linear = train(df, x, y, kernel='linear', svm=True)
+        svm_multiple.poly = train(df, x, y, kernel='poly', svm=True)
+        svm_multiple.rbf = train(df, x, y, kernel='rbf', svm=True)
+        svm_multiple.sigmoid = train(df, x, y, kernel='sigmoid', svm=True)
+        
+    RocCurveDisplay.from_estimator(svm_multiple.linear['Pronostico'],
+                            svm_multiple.linear['X_test'],
+                            svm_multiple.linear['Y_test'],
+                            ax = ax,
+                            name='Lineal')                                   
+    RocCurveDisplay.from_estimator(svm_multiple.poly['Pronostico'],
+                                        svm_multiple.poly['X_test'],
+                                        svm_multiple.poly['Y_test'],
+                                        ax = ax,
+                                        name='Polinomial')
+    RocCurveDisplay.from_estimator(svm_multiple.rbf['Pronostico'],
+                                        svm_multiple.rbf['X_test'],
+                                        svm_multiple.rbf['Y_test'],
+                                        ax = ax,
+                                        name='RBF')
+    RocCurveDisplay.from_estimator(svm_multiple.sigmoid['Pronostico'],
+                                        svm_multiple.sigmoid['X_test'],
+                                        svm_multiple.sigmoid['Y_test'],
+                                        ax = ax,
+                                        name='Sigmoide')
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')

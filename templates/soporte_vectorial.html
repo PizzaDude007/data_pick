@@ -31,36 +31,6 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
     <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
-    
-    <script>
-        function cb(selection) {
-            $.getJSON({
-                url: "/callback", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('chart', result, {});;
-                }
-            });
-        }
-    </script>
-
-    <script>
-        function histCall(selection) {
-            $.getJSON({
-                url: "/hist", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('histChart', result, {});;
-                }
-            });
-        }
-    </script>
-
-    <script>
-        function hmCall(selection) {
-            $.getJSON({
-                url: "/hMap", data: { 'data': selection }, success: function (result) {
-                    Plotly.react('heatMap', result, {});;
-                }
-            });
-        }
-    </script>
 
     <script>
         function scattCall2(selection, xData, yData, colorData) {
@@ -70,6 +40,20 @@
                 }
             });
         }
+    </script>
+
+    <script>
+        function rocCall(selection) {
+            $.getJSON({
+                url: "/roc", data: { 'data': selection}, success: function (result) {
+                    Plotly.react('rocGraph', result, {});;
+                }
+            });
+        }
+    </script>
+
+    <script>
+        $('select').selectpicker();
     </script>
 
 </head>
@@ -333,7 +317,7 @@
                                     <form method="POST" action="" enctype="multipart/form-data">
                                         <p><input type="file" name="file" accept=".csv"></p>
                                         <!--input type="text" name="fileName" id="fileName" value="{{nameData}}" onchange="pca(this.value), hmCall(this.value), changeText(this.value)"-->  
-                                        <select class="custom-select" name="fileName" id="fileName" onchange="pca(this.value), hmCall(this.value), changeText(this.value), arboles(this.value)">
+                                        <select class="custom-select" name="fileName" id="fileName" onchange="pca(this.value), hmCall(this.value), changeText(this.value), arboles(this.value), rocCall(this.value)">
                                             {% for archivo in csv_list %}
                                                 {% if archivo == nameData %}
                                                     <option class="dropdown-item" name="{{archivo}}" id="{{archivo}}" selected>{{archivo}}</a>
@@ -361,7 +345,7 @@
                                     <h6 class="m-0 font-weight-bold text-primary">Gráfico de Dispersión</h6>
                                 </div>
                                 <!-- Card Body -->
-                                <div class="card-body" name="ddScatt" id="ddScatt" onchange="scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value)">                               
+                                <div class="card-body" name="ddScatt" id="ddScatt" onchange="scattCall2(selection=fileName.value, xData=valorX.value, yData=valorY.value, colorData=color.value), rocCall(selection=fileName.value)">                               
                                     Establecer Eje X
                                     <select class="custom-select" name = "valorX" id = "valorX" >
                                         {% for column in table %}
@@ -411,8 +395,8 @@
                                 <!-- Card Body -->
                                 <div class="card-body">
                                     <div class="container-fluid">
-                                        Selección de Variables Predictoras
                                         <form id="multiple_select_form">
+                                            <label for="valorX_PR" class="col-sm-5 col-form-label">Selección de Variables Predictoras </label>
                                             <select class="selectpicker" multiple name = "valorX_PR" id = "valorX_PR">
                                                 {% for column in table %}
                                                     {% if column in res['X'] %}
@@ -422,49 +406,30 @@
                                                     {% endif %}
                                                 {% endfor %}
                                             </select>
-    
-                                            <!--button id="submitAB">Calcular</button-->
-    
-                                            <!--select multiple id="valorX" name="valorX">       
-                                                <option value="1">this</option>       
-                                                <option value="2">that</option>       
-                                                <option value="3">other thing</option>
-                                            </select-->
+
                                             <p></p>
     
                                             <div class="form-inline">
-                                                Selección de Variable a Pronosticar 
+                                                <label for="valorY_PR" class="col-sm-5 col-form-label">Selección de Variable a Pronosticar </label>
                                                 <select class="custom-select" name = "valorY_PR" id = "valorY_PR">
                                                     {% for column in table %}
                                                         <option value="{{column}}" onchange="">{{ column }}</option>
                                                     {% endfor %}
                                                 </select>
-    
                                             </div>
-                                            <p><input type="submit" class="btn btn-light" value="Calcular"></p>
-                                            <p><input type="hidden" value="hidden_valorX" id="hidden_valorX"></p>
-
-                                            {% if res['Score'] %}
-                                            <h4>Modificar Parámetros del Árbol</h4> 
-                                            <div class="form-group row">
-                                                <label for="max_depth" class="col-sm-5 col-form-label">Profundidad Máxima</label>
-                                                <div class="col-sm-4">
-                                                    <input type="text" class="form-control" name="max_depth" id="max_depth" placeholder="Ejemplo: 10" value="{{params[0]}}">
-                                                </div>
+                                            <p></p>
+                                            <div class="form-inline">
+                                                <label for="kernel" class="col-sm-5 col-form-label">Selección de kernel</label>
+                                                <select class="custom-select" name = "kernel" id = "kernel">
+                                                    <option value="linear" onchange="">Lineal</option>
+                                                    <option value="poly" onchange="">Polinomial</option>
+                                                    <option value="rbf" onchange="">Funsión de Base Radial - RBF</option>
+                                                    <option value="sigmoid" onchange="">Sigmoide</option>
+                                                </select>
                                             </div>
-                                            <div class="form-group row">
-                                                <label for="min_samples_split" class="col-sm-5 col-form-label">Minimo de muestras para dividir</label>
-                                                <div class="col-sm-4">
-                                                    <input type="text" class="form-control" name="min_samples_split" id="min_samples_split" placeholder="Ejemplo: 4" value="{{params[1]}}">
-                                                </div>
+                                            <div class="form-inline">
+                                                <input type="submit" class="btn btn-light" value="Calcular">
                                             </div>
-                                            <div class="form-group row">
-                                                <label for="min_samples_leaf" class="col-sm-5 col-form-label">Mínimo de muestras por hoja</label>
-                                                <div class="col-sm-4">
-                                                    <input type="text" class="form-control" name="min_samples_leaf" id="min_samples_leaf" placeholder="Ejemplo: 2" value="{{params[2]}}">
-                                                </div>
-                                            </div>
-                                            {% endif %}
                                         </form>
 
                                     </div>
@@ -476,8 +441,6 @@
                         <!-- Realizar Prediccion -->
                         <div class="col-xl-3 col-lg-2" style="width: 100%">
                             <div class="card shadow mb-4">
-                                <!-- Card Header - Dropdown -->
-                                
                                 <!-- Card Body -->
                                 <div class="card-body">
                                     <h3>Score</h3>
@@ -487,33 +450,17 @@
                             
                         </div>
 
-                        <!-- Mostrar Arbol -->
-                        <div class="" style="width: 100%">
+                        <!-- Modelo SVM -->
+                        <div class="col-xl-12 col-lg-8" style="width: 100%">
                             <div class="card shadow mb-4">
                                 <!-- Card Header - Dropdown -->
-                                <div
-                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Árbol</h6>
-                                    <div class="dropdown no-arrow">
-                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
-                                            aria-labelledby="dropdownMenuLink">
-                                            <div class="dropdown-header">Dropdown Header:</div>
-                                            <a class="dropdown-item" href="#">Action</a>
-                                            <a class="dropdown-item" href="#">Another action</a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="#">Something else here</a>
-                                        </div>
-                                    </div>
+                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Máquina de Soporte Vectorial</h6>
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <div id="treePlot" class="treePlot">
-                                        <img src="/tree.png" class="img-fluid" alt="my plot">
-                                    </div>
+                                    <div id="rocGraph" class="rocGraph" name="rocGraph"></div>
+                                    <!--img src="/svm.png" alt="SVM"-->
                                 </div>
                             </div>
                         </div>
@@ -630,12 +577,11 @@
     </div>
 
     <script>
-        histCall("melb_data.csv");
+        rocCall(fileName.value)
     </script>
 
-<script>
-    hmCall("melb_data.csv");
-</script>
+    <script src="vendor/raphael.js"></script>
+    <script src="Trant.min.js"></script>
 
     <!-- Flask -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -643,7 +589,7 @@
 
    <!-- Bootstrap core JavaScript-->
    <script src="{{url_for('static', filename='vendor/jquery/jquery.min.js')}}"></script>
-   <script src="{{url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js')}}"></script>
+   <!--script src="{{url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js')}}"></script-->
 
    <!-- Core plugin JavaScript -->
    <script src="{{url_for('static', filename='vendor/jquery-easing/jquery.easing.min.js')}}"></script>
@@ -657,6 +603,7 @@
 
    <!-- Page level custom scripts -->
    <script src="{{url_for('static', filename='js/demo/datatables-demo.js')}}"></script>
+
 
 
 </body>
